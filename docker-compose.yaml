@@ -1,0 +1,23 @@
+version: "3.8"
+
+networks:
+  default:
+    external:
+      name: eleanor
+
+services:
+  go-common:
+    build: .
+    depends_on:
+      - go-common-postgres
+    env_file:
+      - .env-default
+      - .env
+
+  go-common-postgres:
+    image: postgres:12.3
+    ports:
+      - 3401:5432
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=go_common

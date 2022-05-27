@@ -1,0 +1,23 @@
+steps:
+  - name: 'bash'
+    args: ['touch', '.env']
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "network",
+        "create",
+        "eleanor"
+      ]
+
+  - name: "gcr.io/ele-infra-802395/docker-compose"
+    args:
+      [
+        "run",
+        "go-common",
+        "go",
+        "test",
+        "-race",
+        "-v",
+        "./...",
+      ]
