@@ -33,33 +33,10 @@ func testDB(t *testing.T) *bun.DB {
 	return db
 }
 
-type testModelEntity struct {
-	ID   string
-	Name string
-}
-
 type testModel struct {
 	ID      string `bun:",pk"`
 	Name    string
 	Related *testRelatedModel `bun:"rel:has-one,join:id=test_model_id"`
-}
-
-func (t *testModel) ToEntity() (*testModelEntity, error) {
-	return &testModelEntity{
-		ID:   t.ID,
-		Name: t.Name,
-	}, nil
-}
-
-func (t *testModel) FromEntity(entity *testModelEntity) error {
-	t.ID = entity.ID
-	t.Name = entity.Name
-
-	return nil
-}
-
-type testRelatedModelEntity struct {
-	ID string
 }
 
 type testRelatedModel struct {
@@ -67,43 +44,21 @@ type testRelatedModel struct {
 	TestModelID string
 }
 
-func (t *testRelatedModel) ToEntity() (*testRelatedModelEntity, error) {
-	return &testRelatedModelEntity{
-		ID: t.ID,
-	}, nil
-}
-
-func (t *testRelatedModel) FromEntity(entity *testRelatedModelEntity) error {
-	t.ID = entity.ID
-
-	return nil
-}
-
-func TestSelectQuery_non_pointer(t *testing.T) {
+func TestStore_SelectQuery_non_struct_slice_pointer(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
 
-	model := testModel{}
-	query, table, err := SelectQuery(context.Background(), db, model)
-	assert.Nil(query)
-	assert.Nil(table)
-	assert.ErrorIs(err, ErrModelNotPointer)
-}
-
-func TestSelectQuery_non_struct_slice_pointer(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
-
+	store := NewStore[int](db)
 	model := 1
-	query, table, err := SelectQuery(context.Background(), db, &model)
+
+	query, table, err := store.SelectQuery(context.Background(), &model)
 	assert.Nil(query)
 	assert.Nil(table)
 	assert.ErrorIs(err, ErrModelNotStructSlicePointer)
 }
 
-func TestSelectQuery(t *testing.T) {
+func TestStore_SelectQuery(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -121,8 +76,10 @@ func TestSelectQuery(t *testing.T) {
 	_, err = db.NewInsert().Model(relatedModel).Exec(context.Background())
 	assert.NoError(err)
 
+	store := NewStore[testModel](db)
 	model := &testModel{}
-	query, table, err := SelectQuery(context.Background(), db, model)
+
+	query, table, err := store.SelectQuery(context.Background(), model)
 	assert.Equal("test_models", table.Name)
 	assert.NoError(err)
 
@@ -132,7 +89,7 @@ func TestSelectQuery(t *testing.T) {
 	assert.NotNil(model.Related)
 }
 
-func TestSelectForUpdateQuery(t *testing.T) {
+func TestStore_SelectForUpdateQuery(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -146,8 +103,10 @@ func TestSelectForUpdateQuery(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
+	store := NewStore[testModel](db)
 	model := &testModel{}
-	query, _, err := SelectForUpdateQuery(context.Background(), db, model, false)
+
+	query, _, err := store.SelectForUpdateQuery(context.Background(), model, false)
 	assert.NoError(err)
 
 	err = query.Scan(context.Background())
@@ -157,7 +116,7 @@ func TestSelectForUpdateQuery(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model")
 }
 
-func TestSelectForUpdateQuery_skip_locked(t *testing.T) {
+func TestStore_SelectForUpdateQuery_skip_locked(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -171,8 +130,10 @@ func TestSelectForUpdateQuery_skip_locked(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
+	store := NewStore[testModel](db)
 	model := &testModel{}
-	query, _, err := SelectForUpdateQuery(context.Background(), db, model, true)
+
+	query, _, err := store.SelectForUpdateQuery(context.Background(), model, true)
 	assert.NoError(err)
 
 	err = query.Scan(context.Background())
@@ -182,7 +143,7 @@ func TestSelectForUpdateQuery_skip_locked(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model SKIP LOCKED")
 }
 
-func TestFind(t *testing.T) {
+func TestStore_Find(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -199,7 +160,8 @@ func TestFind(t *testing.T) {
 	_, err = db.NewInsert().Model(insertModel2).Exec(context.Background())
 	assert.NoError(err)
 
-	model, err := Find[testModel](context.Background(), db, nil)
+	store := NewStore[testModel](db)
+	model, err := store.Find(context.Background(), nil)
 	assert.NoError(err)
 
 	assert.Len(model, 2)
@@ -209,7 +171,7 @@ func TestFind(t *testing.T) {
 	assert.Contains(ids, insertModel2.ID)
 }
 
-func TestFind_query(t *testing.T) {
+func TestStore_Find_query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -228,7 +190,8 @@ func TestFind_query(t *testing.T) {
 	_, err = db.NewInsert().Model(insertModel2).Exec(context.Background())
 	assert.NoError(err)
 
-	model, err := Find[testModel](context.Background(), db, func(q *bun.SelectQuery) {
+	store := NewStore[testModel](db)
+	model, err := store.Find(context.Background(), func(q *bun.SelectQuery) {
 		q.Where("name = ?", "foo")
 	})
 	assert.NoError(err)
@@ -238,18 +201,19 @@ func TestFind_query(t *testing.T) {
 	assert.Equal(insertModel, model[0])
 }
 
-func TestFind_not_found(t *testing.T) {
+func TestStore_Find_not_found(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
 
-	model, err := Find[testModel](context.Background(), db, nil)
+	store := NewStore[testModel](db)
+	model, err := store.Find(context.Background(), nil)
 	assert.NoError(err)
 
 	assert.Len(model, 0)
 }
 
-func TestFindByID(t *testing.T) {
+func TestStore_FindByID(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -260,22 +224,24 @@ func TestFindByID(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	model, err := FindByID[testModel](context.Background(), db, insertModel.ID)
+	store := NewStore[testModel](db)
+	model, err := store.FindByID(context.Background(), insertModel.ID)
 	assert.NoError(err)
 
 	assert.Equal(insertModel, model)
 }
 
-func TestFindByID_not_found(t *testing.T) {
+func TestStore_FindByID_not_found(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
 
-	_, err := FindByID[testModel](context.Background(), db, "non-existent-id")
+	store := NewStore[testModel](db)
+	_, err := store.FindByID(context.Background(), "non-existent-id")
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
-func TestFindByIDForUpdate(t *testing.T) {
+func TestStore_FindByIDForUpdate(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -289,7 +255,8 @@ func TestFindByIDForUpdate(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, false)
+	store := NewStore[testModel](db)
+	model, err := store.FindByIDForUpdate(context.Background(), insertModel.ID, false)
 	assert.NoError(err)
 
 	assert.Equal(insertModel, model)
@@ -298,7 +265,7 @@ func TestFindByIDForUpdate(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model")
 }
 
-func TestFindByIDForUpdate_skip_locked(t *testing.T) {
+func TestStore_FindByIDForUpdate_skip_locked(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -312,7 +279,8 @@ func TestFindByIDForUpdate_skip_locked(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, true)
+	store := NewStore[testModel](db)
+	model, err := store.FindByIDForUpdate(context.Background(), insertModel.ID, true)
 	assert.NoError(err)
 
 	assert.Equal(insertModel, model)
@@ -321,7 +289,7 @@ func TestFindByIDForUpdate_skip_locked(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model SKIP LOCKED")
 }
 
-func TestSave(t *testing.T) {
+func TestStore_Save(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -332,7 +300,9 @@ func TestSave(t *testing.T) {
 	insertModel := &testModel{
 		ID: uuid.New().String(),
 	}
-	err := Save(context.Background(), db, insertModel, nil, nil)
+
+	store := NewStore[testModel](db)
+	err := store.Save(context.Background(), insertModel)
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -342,7 +312,34 @@ func TestSave(t *testing.T) {
 	assert.Equal(insertModel, model)
 }
 
-func TestSave_hooks(t *testing.T) {
+func TestStore_Save_update(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	qLogger := &queryLogger{}
+	db.AddQueryHook(qLogger)
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	insertModel.Name = "foo"
+
+	store := NewStore[testModel](db)
+	err = store.Save(context.Background(), insertModel)
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Scan(context.Background())
+	assert.NoError(err)
+
+	assert.Equal(insertModel, model)
+}
+
+func TestStore_WithBeforeSaveHooks_WithAfterSaveHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -364,7 +361,12 @@ func TestSave_hooks(t *testing.T) {
 	insertModel := &testModel{
 		ID: uuid.New().String(),
 	}
-	err := Save(context.Background(), db, insertModel, beforeSave, afterSave)
+
+	store := NewStore[testModel](db)
+	store.WithBeforeSaveHooks(beforeSave)
+	store.WithAfterSaveHooks(afterSave)
+
+	err := store.Save(context.Background(), insertModel)
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -376,7 +378,7 @@ func TestSave_hooks(t *testing.T) {
 	assert.True(afterSaveCalled)
 }
 
-func TestSave_before_hook_error(t *testing.T) {
+func TestStore_Save_WithBeforeSaveHooks_error(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -392,11 +394,15 @@ func TestSave_before_hook_error(t *testing.T) {
 	insertModel := &testModel{
 		ID: uuid.New().String(),
 	}
-	err := Save(context.Background(), db, insertModel, beforeSave, nil)
+
+	store := NewStore[testModel](db)
+	store.WithBeforeSaveHooks(beforeSave)
+
+	err := store.Save(context.Background(), insertModel)
 	assert.ErrorIs(err, beforeSaveErr)
 }
 
-func TestDelete(t *testing.T) {
+func TestStore_Delete(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -410,7 +416,9 @@ func TestDelete(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Delete(context.Background(), db, insertModel, nil, nil)
+	store := NewStore[testModel](db)
+
+	err = store.Delete(context.Background(), insertModel)
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -418,7 +426,7 @@ func TestDelete(t *testing.T) {
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
-func TestDelete_hooks(t *testing.T) {
+func TestStore_Delete_WithBeforeDeleteHooks_WithAfterDeleteHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -443,7 +451,11 @@ func TestDelete_hooks(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Delete(context.Background(), db, insertModel, beforeDelete, afterDelete)
+	store := NewStore[testModel](db)
+	store.WithBeforeDeleteHooks(beforeDelete)
+	store.WithAfterDeleteHooks(afterDelete)
+
+	err = store.Delete(context.Background(), insertModel)
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -454,7 +466,7 @@ func TestDelete_hooks(t *testing.T) {
 	assert.True(afterDeleteCalled)
 }
 
-func TestDelete_before_hook_error(t *testing.T) {
+func TestStore_Delete_WithBeforeDeleteHooks_error(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -473,11 +485,14 @@ func TestDelete_before_hook_error(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Delete(context.Background(), db, insertModel, beforeDelete, nil)
+	store := NewStore[testModel](db)
+	store.WithBeforeDeleteHooks(beforeDelete)
+
+	err = store.Delete(context.Background(), insertModel)
 	assert.ErrorIs(err, beforeDeleteErr)
 }
 
-func TestTrx(t *testing.T) {
+func TestStore_Trx(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -511,7 +526,7 @@ func TestTrx(t *testing.T) {
 	assert.Equal(1, commitCount)
 }
 
-func TestTrx_external_tx(t *testing.T) {
+func TestStore_Trx_external_tx(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -551,7 +566,7 @@ func TestTrx_external_tx(t *testing.T) {
 	assert.Equal(1, commitCount)
 }
 
-func TestTrx_nested_transaction(t *testing.T) {
+func TestStore_Trx_nested_transaction(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
