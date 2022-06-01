@@ -11,7 +11,10 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-func selectQuery(ctx context.Context, db bun.IDB, model any) (*bun.SelectQuery, *schema.Table, error) {
+type BeforeHook[ModelT any] func(ctx context.Context, db bun.IDB, model *ModelT) error
+type AfterHook[ModelT any] func(ctx context.Context, model *ModelT)
+
+func SelectQuery(ctx context.Context, db bun.IDB, model any) (*bun.SelectQuery, *schema.Table, error) {
 	rType := reflect.TypeOf(model)
 	if rType.Kind() != reflect.Ptr {
 		return nil, nil, ErrModelNotPointer
@@ -35,8 +38,8 @@ func selectQuery(ctx context.Context, db bun.IDB, model any) (*bun.SelectQuery, 
 	return query, table, nil
 }
 
-func selectForUpdateQuery(ctx context.Context, db bun.IDB, model any, skipLocked bool) (*bun.SelectQuery, *schema.Table, error) {
-	query, table, err := selectQuery(ctx, db, model)
+func SelectForUpdateQuery(ctx context.Context, db bun.IDB, model any, skipLocked bool) (*bun.SelectQuery, *schema.Table, error) {
+	query, table, err := SelectQuery(ctx, db, model)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -51,9 +54,9 @@ func selectForUpdateQuery(ctx context.Context, db bun.IDB, model any, skipLocked
 	return query, table, nil
 }
 
-func find[ModelT any](ctx context.Context, db bun.IDB, queryFn func(q *bun.SelectQuery)) ([]*ModelT, error) {
+func Find[ModelT any](ctx context.Context, db bun.IDB, queryFn func(q *bun.SelectQuery)) ([]*ModelT, error) {
 	var model []*ModelT
-	query, _, err := selectQuery(ctx, db, &model)
+	query, _, err := SelectQuery(ctx, db, &model)
 	if err != nil {
 		return nil, errs.Wrap(err, "select query")
 	}
@@ -70,9 +73,9 @@ func find[ModelT any](ctx context.Context, db bun.IDB, queryFn func(q *bun.Selec
 	return model, nil
 }
 
-func findbyID[ModelT any](ctx context.Context, db bun.IDB, id any) (*ModelT, error) {
+func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any) (*ModelT, error) {
 	var model ModelT
-	query, table, err := selectQuery(ctx, db, &model)
+	query, table, err := SelectQuery(ctx, db, &model)
 	if err != nil {
 		return nil, errs.Wrap(err, "select query")
 	}
@@ -91,9 +94,9 @@ func findbyID[ModelT any](ctx context.Context, db bun.IDB, id any) (*ModelT, err
 	return &model, nil
 }
 
-func findbyIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skipLocked bool) (*ModelT, error) {
+func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skipLocked bool) (*ModelT, error) {
 	var model ModelT
-	query, table, err := selectForUpdateQuery(ctx, db, &model, skipLocked)
+	query, table, err := SelectForUpdateQuery(ctx, db, &model, skipLocked)
 	if err != nil {
 		return nil, errs.Wrap(err, "select for update query")
 	}
@@ -112,7 +115,7 @@ func findbyIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skip
 	return &model, nil
 }
 
-func save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+func Save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
 	rType := reflect.TypeOf(model)
 	if rType.Kind() != reflect.Ptr {
 		return ErrModelNotPointer
@@ -122,7 +125,7 @@ func save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []
 		return ErrModelNotStructSlicePointer
 	}
 
-	err := trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
+	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
 		for _, fn := range befores {
 			err := fn(ctx, tx, model)
 			if err != nil {
@@ -160,7 +163,7 @@ func save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []
 	return nil
 }
 
-func delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
 	rType := reflect.TypeOf(model)
 	if rType.Kind() != reflect.Ptr {
 		return ErrModelNotPointer
@@ -170,7 +173,7 @@ func delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 		return ErrModelNotStructSlicePointer
 	}
 
-	err := trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
+	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
 		for _, fn := range befores {
 			err := fn(ctx, tx, model)
 			if err != nil {
@@ -213,7 +216,7 @@ func relations(query *bun.SelectQuery, table *schema.Table, parent string) {
 	}
 }
 
-func trx(ctx context.Context, db bun.IDB, fn func(ctx context.Context, tx bun.IDB) error) error {
+func Trx(ctx context.Context, db bun.IDB, fn func(ctx context.Context, tx bun.IDB) error) error {
 	var tx bun.Tx
 	var err error
 	var commit bool

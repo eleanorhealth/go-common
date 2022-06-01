@@ -7,9 +7,6 @@ import (
 	"github.com/uptrace/bun/schema"
 )
 
-type BeforeHook[ModelT any] func(ctx context.Context, db bun.IDB, model *ModelT) error
-type AfterHook[ModelT any] func(ctx context.Context, model *ModelT)
-
 type Storer[ModelT any] interface {
 	SelectQuery(ctx context.Context, model *ModelT) (*bun.SelectQuery, *schema.Table, error)
 	SelectForUpdateQuery(ctx context.Context, model *ModelT, skipLocked bool) (*bun.SelectQuery, *schema.Table, error)
@@ -44,35 +41,35 @@ func NewStore[ModelT any](db bun.IDB) *Store[ModelT] {
 }
 
 func (s *Store[ModelT]) SelectQuery(ctx context.Context, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
-	return selectQuery(ctx, s.db, model)
+	return SelectQuery(ctx, s.db, model)
 }
 
 func (s *Store[ModelT]) SelectForUpdateQuery(ctx context.Context, model *ModelT, skipLocked bool) (*bun.SelectQuery, *schema.Table, error) {
-	return selectForUpdateQuery(ctx, s.db, model, skipLocked)
+	return SelectForUpdateQuery(ctx, s.db, model, skipLocked)
 }
 
 func (s *Store[ModelT]) Find(ctx context.Context, queryFn func(q *bun.SelectQuery)) ([]*ModelT, error) {
-	return find[ModelT](ctx, s.db, queryFn)
+	return Find[ModelT](ctx, s.db, queryFn)
 }
 
 func (s *Store[ModelT]) FindByID(ctx context.Context, id any) (*ModelT, error) {
-	return findbyID[ModelT](ctx, s.db, id)
+	return FindByID[ModelT](ctx, s.db, id)
 }
 
 func (s *Store[ModelT]) FindByIDForUpdate(ctx context.Context, id any, skipLocked bool) (*ModelT, error) {
-	return findbyIDForUpdate[ModelT](ctx, s.db, id, skipLocked)
+	return FindByIDForUpdate[ModelT](ctx, s.db, id, skipLocked)
 }
 
 func (s *Store[ModelT]) Save(ctx context.Context, model *ModelT) error {
-	return save(ctx, s.db, model, s.beforeSave, s.afterSave)
+	return Save(ctx, s.db, model, s.beforeSave, s.afterSave)
 }
 
 func (s *Store[ModelT]) Delete(ctx context.Context, model *ModelT) error {
-	return delete(ctx, s.db, model, s.beforeDelete, s.afterDelete)
+	return Delete(ctx, s.db, model, s.beforeDelete, s.afterDelete)
 }
 
 func (s *Store[ModelT]) Trx(ctx context.Context, fn func(ctx context.Context, txStore Storer[ModelT]) error) error {
-	return trx(ctx, s.db, func(ctx context.Context, tx bun.IDB) error {
+	return Trx(ctx, s.db, func(ctx context.Context, tx bun.IDB) error {
 		txStore := NewStore[ModelT](tx)
 		return fn(ctx, txStore)
 	})

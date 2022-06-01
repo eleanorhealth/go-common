@@ -504,7 +504,7 @@ func TestStore_Trx(t *testing.T) {
 		ID: uuid.New().String(),
 	}
 
-	err := trx(context.Background(), db, func(ctx context.Context, tx bun.IDB) error {
+	err := Trx(context.Background(), db, func(ctx context.Context, tx bun.IDB) error {
 		_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 		return err
 	})
@@ -541,7 +541,7 @@ func TestStore_Trx_external_tx(t *testing.T) {
 	tx, err := db.Begin()
 	assert.NoError(err)
 
-	err = trx(context.Background(), tx, func(ctx context.Context, tx bun.IDB) error {
+	err = Trx(context.Background(), tx, func(ctx context.Context, tx bun.IDB) error {
 		_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 		return err
 	})
@@ -578,8 +578,8 @@ func TestStore_Trx_nested_transaction(t *testing.T) {
 		ID: uuid.New().String(),
 	}
 
-	err := trx(context.Background(), db, func(ctx context.Context, tx bun.IDB) error {
-		return trx(context.Background(), tx, func(ctx context.Context, tx bun.IDB) error {
+	err := Trx(context.Background(), db, func(ctx context.Context, tx bun.IDB) error {
+		return Trx(context.Background(), tx, func(ctx context.Context, tx bun.IDB) error {
 			_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 			return err
 		})
