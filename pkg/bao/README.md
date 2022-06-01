@@ -2,7 +2,7 @@
 
 bao provides a few additional features for [Bun](https://github.com/uptrace/bun):
 
-* A testable and typed store for finding, saving, and deleting models
+* Helper functions with type parameters for finding, saving, and deleting models
 * Transaction-aware before and after hooks
 * Nested transaction handling
 
@@ -15,16 +15,14 @@ type user struct {
     NameLast  string
 }
 
-// db is a *bun.DB
-userStore := bao.NewStore[user](db)
-
 newUser := &user{
     ID:        uuid.New().String(),
     NameFirst: "John",
     NameLast:  "Smith",
 }
 
-err := userStore.Save(context.Background(), newUser)
+// db is a *bun.DB
+err := bao.Save(context.Background(), db, newUser, nil, nil)
 if err != nil {
     log.Fatal(err)
 }
@@ -48,19 +46,20 @@ myAfterSaveHook := func(ctx context.Context, model *user) {
     fmt.Println("after save")
 }
 
-// db is a *bun.DB
-userStore := bao.NewStore[user](db)
-userStore.WithBeforeSaveHooks(myBeforeSaveHook)
-userStore.WithAfterSaveHooks(myAfterSaveHook)
-
 newUser := &user{
     ID:        uuid.New().String(),
     NameFirst: "John",
     NameLast:  "Smith",
 }
 
-// Save will call myBeforeSaveHook and myAfterSaveHook.
-err := userStore.Save(context.Background(), newUser)
+// db is a *bun.DB
+err := bao.Save(
+    context.Background(),
+    db,
+    newUser,
+    []bao.BeforeHook[user]{myBeforeSaveHook},
+    []bao.AfterHook[user]{myAfterSaveHook},
+)
 if err != nil {
     log.Fatal(err)
 }
