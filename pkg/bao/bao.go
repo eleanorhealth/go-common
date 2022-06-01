@@ -14,12 +14,8 @@ import (
 type BeforeHook[ModelT any] func(ctx context.Context, db bun.IDB, model *ModelT) error
 type AfterHook[ModelT any] func(ctx context.Context, model *ModelT)
 
-func SelectQuery(ctx context.Context, db bun.IDB, model any) (*bun.SelectQuery, *schema.Table, error) {
+func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
 	rType := reflect.TypeOf(model)
-	if rType.Kind() != reflect.Ptr {
-		return nil, nil, ErrModelNotPointer
-	}
-
 	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
 		return nil, nil, ErrModelNotStructSlicePointer
 	}
@@ -38,7 +34,7 @@ func SelectQuery(ctx context.Context, db bun.IDB, model any) (*bun.SelectQuery, 
 	return query, table, nil
 }
 
-func SelectForUpdateQuery(ctx context.Context, db bun.IDB, model any, skipLocked bool) (*bun.SelectQuery, *schema.Table, error) {
+func SelectForUpdateQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, skipLocked bool) (*bun.SelectQuery, *schema.Table, error) {
 	query, table, err := SelectQuery(ctx, db, model)
 	if err != nil {
 		return nil, nil, err

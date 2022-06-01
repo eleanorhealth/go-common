@@ -39,9 +39,9 @@ func TestWrap(t *testing.T) {
 func TestWrapf(t *testing.T) {
 	assert := assert.New(t)
 
-	err := errors.New("dynamite")
-	wrapped := Wrapf(err, "blown with user %s", "123")
+	err := errors.New("test")
+	wrapped := Wrapf(err, "this is a wrapped %s", "error")
 	cause := Cause(wrapped)
 	assert.Equal(err, cause)
-	assert.Equal("blown with user 123: dynamite", wrapped.Error())
+	assert.Equal("this is a wrapped error: test", wrapped.Error())
 }
