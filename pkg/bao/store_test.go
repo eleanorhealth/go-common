@@ -402,6 +402,44 @@ func TestStore_Save_WithBeforeSaveHooks_error(t *testing.T) {
 	assert.ErrorIs(err, beforeSaveErr)
 }
 
+func TestStore_WithBeforeSaveHooks_order(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	qLogger := &queryLogger{}
+	db.AddQueryHook(qLogger)
+
+	called := []int{}
+
+	beforeSave := func(ctx context.Context, db bun.IDB, model *testModel) error {
+		called = append(called, 1)
+		return nil
+	}
+
+	beforeSave2 := func(ctx context.Context, db bun.IDB, model *testModel) error {
+		called = append(called, 2)
+		return nil
+	}
+
+	beforeSave3 := func(ctx context.Context, db bun.IDB, model *testModel) error {
+		called = append(called, 3)
+		return nil
+	}
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+
+	store := NewStore[testModel](db)
+	store.WithBeforeSaveHooks(beforeSave, beforeSave2, beforeSave3)
+
+	err := store.Save(context.Background(), insertModel)
+	assert.NoError(err)
+
+	assert.Equal([]int{1, 2, 3}, called)
+}
+
 func TestStore_Delete(t *testing.T) {
 	assert := assert.New(t)
 

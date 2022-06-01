@@ -20,7 +20,7 @@ func LocalParameterBeforeHook[ModelT any](fn func(ctx context.Context) map[strin
 		for k, v := range vars {
 			_, err := db.ExecContext(ctx, fmt.Sprintf(`SET LOCAL "%s" = ?`, k), v)
 			if err != nil {
-				return errs.Wrap(err, "setting local parameter")
+				return errs.Wrapf(err, "setting local parameter %s", k)
 			}
 		}
 

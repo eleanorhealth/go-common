@@ -1,5 +1,11 @@
 # bao
 
+bao provides a few additional features for [Bun](https://github.com/uptrace/bun):
+
+* A testable and typed store for finding, saving, and deleting models
+* Transaction-aware before and after hooks
+* Nested transaction handling
+
 ## Basic Usage
 
 ```go
@@ -53,6 +59,7 @@ newUser := &user{
     NameLast:  "Smith",
 }
 
+// Save will call myBeforeSaveHook and myAfterSaveHook.
 err := userStore.Save(context.Background(), newUser)
 if err != nil {
     log.Fatal(err)
