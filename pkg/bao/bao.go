@@ -70,8 +70,8 @@ func Find[ModelT any](ctx context.Context, db bun.IDB, queryFn func(q *bun.Selec
 }
 
 func FindFirst[ModelT any](ctx context.Context, db bun.IDB, queryFn func(q *bun.SelectQuery)) (*ModelT, error) {
-	model := new(ModelT)
-	query, _, err := SelectQuery(ctx, db, model)
+	var model ModelT
+	query, _, err := SelectQuery(ctx, db, &model)
 	if err != nil {
 		return nil, errs.Wrap(err, "select query")
 	}
@@ -85,7 +85,7 @@ func FindFirst[ModelT any](ctx context.Context, db bun.IDB, queryFn func(q *bun.
 		return nil, errs.Wrap(err, "scanning model")
 	}
 
-	return model, nil
+	return &model, nil
 }
 
 func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any) (*ModelT, error) {
