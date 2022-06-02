@@ -236,6 +236,43 @@ func TestStore_Find_not_found(t *testing.T) {
 	assert.Len(model, 0)
 }
 
+func TestStore_FindFirst_query(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	insertModel := &testModel{
+		ID:   uuid.New().String(),
+		Name: "foo",
+	}
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	insertModel2 := &testModel{
+		ID:   uuid.New().String(),
+		Name: "bar",
+	}
+	_, err = db.NewInsert().Model(insertModel2).Exec(context.Background())
+	assert.NoError(err)
+
+	model, err := FindFirst[testModel](context.Background(), db, func(q *bun.SelectQuery) {
+		q.Where("name = ?", "foo")
+	})
+	assert.NoError(err)
+
+	assert.Equal(insertModel, model)
+}
+
+func TestStore_FindFirst_not_found(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	model, err := FindFirst[testModel](context.Background(), db, nil)
+	assert.Nil(model)
+	assert.ErrorIs(err, sql.ErrNoRows)
+}
+
 func TestStore_FindByID(t *testing.T) {
 	assert := assert.New(t)
 
@@ -258,7 +295,8 @@ func TestStore_FindByID_not_found(t *testing.T) {
 
 	db := testDB(t)
 
-	_, err := FindByID[testModel](context.Background(), db, "non-existent-id")
+	model, err := FindByID[testModel](context.Background(), db, "non-existent-id")
+	assert.Nil(model)
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
