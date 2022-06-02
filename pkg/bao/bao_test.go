@@ -426,7 +426,32 @@ func TestStore_Delete(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Delete(context.Background(), db, insertModel, nil, nil)
+	err = Delete(context.Background(), db, insertModel, nil, nil, nil)
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Scan(context.Background())
+	assert.ErrorIs(err, sql.ErrNoRows)
+}
+
+func TestStore_Delete_query(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	qLogger := &queryLogger{}
+	db.AddQueryHook(qLogger)
+
+	insertModel := &testModel{
+		ID:   uuid.New().String(),
+		Name: "foo",
+	}
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	err = Delete(context.Background(), db, insertModel, func(q *bun.DeleteQuery) {
+		q.Where("name = ?", "foo")
+	}, nil, nil)
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -459,7 +484,7 @@ func TestStore_Delete_WithBeforeDeleteHooks_WithAfterDeleteHooks(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Delete(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeDelete}, []AfterHook[testModel]{afterDelete})
+	err = Delete(context.Background(), db, insertModel, nil, []BeforeHook[testModel]{beforeDelete}, []AfterHook[testModel]{afterDelete})
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -489,7 +514,7 @@ func TestStore_Delete_WithBeforeDeleteHooks_error(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Delete(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeDelete}, nil)
+	err = Delete(context.Background(), db, insertModel, nil, []BeforeHook[testModel]{beforeDelete}, nil)
 	assert.ErrorIs(err, beforeDeleteErr)
 }
 
