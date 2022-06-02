@@ -57,7 +57,7 @@ func TestStore_SelectQuery_non_struct_slice_pointer(t *testing.T) {
 	assert.ErrorIs(err, ErrModelNotStructSlicePointer)
 }
 
-func TestStore_SelectQuery(t *testing.T) {
+func TestStore_SelectQuery_struct(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -85,6 +85,36 @@ func TestStore_SelectQuery(t *testing.T) {
 	assert.NoError(err)
 
 	assert.NotNil(model.Related)
+}
+
+func TestStore_SelectQuery_slice(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	relatedModel := &testRelatedModel{
+		ID:          uuid.New().String(),
+		TestModelID: insertModel.ID,
+	}
+	_, err = db.NewInsert().Model(relatedModel).Exec(context.Background())
+	assert.NoError(err)
+
+	var model []*testModel
+
+	query, table, err := SelectQuery(context.Background(), db, &model)
+	assert.Equal("test_models", table.Name)
+	assert.NoError(err)
+
+	err = query.Scan(context.Background())
+	assert.NoError(err)
+
+	assert.NotNil(model[0].Related)
 }
 
 func TestStore_SelectForUpdateQuery(t *testing.T) {

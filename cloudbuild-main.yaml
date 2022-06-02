@@ -14,7 +14,7 @@ steps:
     args:
       [
         "run",
-        "go-common",
+        "common",
         "go",
         "test",
         "-race",
