@@ -13,8 +13,10 @@ steps:
   - name: "gcr.io/ele-infra-802395/docker-compose"
     args:
       [
-        "run",
+        "-p",
         "go-common",
+        "run",
+        "common",
         "go",
         "test",
         "-race",

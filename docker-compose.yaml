@@ -6,15 +6,15 @@ networks:
       name: eleanor
 
 services:
-  go-common:
+  common:
     build: .
     depends_on:
-      - go-common-postgres
+      - postgres
     env_file:
       - .env-default
       - .env
 
-  go-common-postgres:
+  postgres:
     image: postgres:12.3
     ports:
       - 3401:5432
