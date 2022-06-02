@@ -146,20 +146,20 @@ func Save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []
 			}
 		}
 
-		for _, fn := range afters {
-			fn(ctx, model)
-		}
-
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 
+	for _, fn := range afters {
+		fn(ctx, model)
+	}
+
 	return nil
 }
 
-func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn func(q *bun.DeleteQuery), befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
 	rType := reflect.TypeOf(model)
 	if rType.Kind() != reflect.Ptr {
 		return ErrModelNotPointer
@@ -177,19 +177,27 @@ func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			}
 		}
 
-		_, err := tx.NewDelete().Model(model).WherePK().Exec(ctx)
-		if err != nil {
-			return errs.Wrap(err, "deleting model")
+		query := tx.NewDelete().Model(model)
+
+		if queryFn != nil {
+			queryFn(query)
+		} else {
+			query.WherePK()
 		}
 
-		for _, fn := range afters {
-			fn(ctx, model)
+		_, err := query.Exec(ctx)
+		if err != nil {
+			return errs.Wrap(err, "deleting model")
 		}
 
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+
+	for _, fn := range afters {
+		fn(ctx, model)
 	}
 
 	return nil
