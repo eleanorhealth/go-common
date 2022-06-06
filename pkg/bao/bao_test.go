@@ -138,6 +138,7 @@ func TestStore_SelectForUpdateQuery(t *testing.T) {
 
 	err = query.Scan(context.Background())
 	assert.NoError(err)
+	assert.Equal(insertModel, model)
 
 	assert.Len(qLogger.queries, 2)
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model")
@@ -164,6 +165,7 @@ func TestStore_SelectForUpdateQuery_skip_locked(t *testing.T) {
 
 	err = query.Scan(context.Background())
 	assert.NoError(err)
+	assert.Equal(insertModel, model)
 
 	assert.Len(qLogger.queries, 2)
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model SKIP LOCKED")
@@ -316,7 +318,6 @@ func TestStore_FindByIDForUpdate(t *testing.T) {
 
 	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, false)
 	assert.NoError(err)
-
 	assert.Equal(insertModel, model)
 
 	assert.Len(qLogger.queries, 2)
@@ -339,7 +340,6 @@ func TestStore_FindByIDForUpdate_skip_locked(t *testing.T) {
 
 	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, true)
 	assert.NoError(err)
-
 	assert.Equal(insertModel, model)
 
 	assert.Len(qLogger.queries, 2)
@@ -350,9 +350,6 @@ func TestStore_Save(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-
-	qLogger := &queryLogger{}
-	db.AddQueryHook(qLogger)
 
 	insertModel := &testModel{
 		ID: uuid.New().String(),
@@ -372,9 +369,6 @@ func TestStore_Save_update(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-
-	qLogger := &queryLogger{}
-	db.AddQueryHook(qLogger)
 
 	insertModel := &testModel{
 		ID: uuid.New().String(),
@@ -398,9 +392,6 @@ func TestStore_WithBeforeSaveHooks_WithAfterSaveHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-
-	qLogger := &queryLogger{}
-	db.AddQueryHook(qLogger)
 
 	var beforeSaveCalled bool
 	beforeSave := func(ctx context.Context, db bun.IDB, model *testModel) error {
@@ -434,9 +425,6 @@ func TestStore_Save_WithBeforeSaveHooks_error(t *testing.T) {
 
 	db := testDB(t)
 
-	qLogger := &queryLogger{}
-	db.AddQueryHook(qLogger)
-
 	var beforeSaveErr = errors.New("test")
 	beforeSave := func(ctx context.Context, db bun.IDB, model *testModel) error {
 		return beforeSaveErr
@@ -454,9 +442,6 @@ func TestStore_Delete(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-
-	qLogger := &queryLogger{}
-	db.AddQueryHook(qLogger)
 
 	insertModel := &testModel{
 		ID: uuid.New().String(),
@@ -476,9 +461,6 @@ func TestStore_Delete_query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-
-	qLogger := &queryLogger{}
-	db.AddQueryHook(qLogger)
 
 	insertModel := &testModel{
 		ID:   uuid.New().String(),
@@ -501,9 +483,6 @@ func TestStore_Delete_WithBeforeDeleteHooks_WithAfterDeleteHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-
-	qLogger := &queryLogger{}
-	db.AddQueryHook(qLogger)
 
 	var beforeDeleteCalled bool
 	beforeDelete := func(ctx context.Context, db bun.IDB, model *testModel) error {
@@ -537,9 +516,6 @@ func TestStore_Delete_WithBeforeDeleteHooks_error(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-
-	qLogger := &queryLogger{}
-	db.AddQueryHook(qLogger)
 
 	beforeDeleteErr := errors.New("test")
 	beforeDelete := func(ctx context.Context, db bun.IDB, model *testModel) error {
