@@ -81,6 +81,8 @@ func TestStore_SelectQuery_struct(t *testing.T) {
 	assert.Equal("test_models", table.Name)
 	assert.NoError(err)
 
+	query.Relation("Related")
+
 	err = query.Scan(context.Background())
 	assert.NoError(err)
 
@@ -110,6 +112,8 @@ func TestStore_SelectQuery_slice(t *testing.T) {
 	query, table, err := SelectQuery(context.Background(), db, &model)
 	assert.Equal("test_models", table.Name)
 	assert.NoError(err)
+
+	query.Relation("Related")
 
 	err = query.Scan(context.Background())
 	assert.NoError(err)

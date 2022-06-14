@@ -29,8 +29,6 @@ func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*b
 		table = query.DB().Table(rType.Elem().Elem())
 	}
 
-	relations(query, table, "")
-
 	return query, table, nil
 }
 
@@ -220,23 +218,6 @@ func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn 
 	}
 
 	return nil
-}
-
-func relations(query *bun.SelectQuery, table *schema.Table, parent string) {
-	for _, relation := range table.Relations {
-		var relationName string
-		if len(parent) > 0 {
-			relationName = parent + "." + relation.Field.GoName
-		} else {
-			relationName = relation.Field.GoName
-		}
-
-		query.Relation(relationName)
-
-		if relation.JoinTable != nil {
-			relations(query, relation.JoinTable, relationName)
-		}
-	}
 }
 
 func Trx(ctx context.Context, db bun.IDB, fn func(ctx context.Context, tx bun.IDB) error) error {
