@@ -29,8 +29,6 @@ func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*b
 		table = query.DB().Table(rType.Elem().Elem())
 	}
 
-	relations(query, table, "")
-
 	return query, table, nil
 }
 
@@ -88,7 +86,7 @@ func FindFirst[ModelT any](ctx context.Context, db bun.IDB, queryFn func(q *bun.
 	return &model, nil
 }
 
-func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any) (*ModelT, error) {
+func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any, queryFn func(q *bun.SelectQuery)) (*ModelT, error) {
 	var model ModelT
 	query, table, err := SelectQuery(ctx, db, &model)
 	if err != nil {
@@ -101,6 +99,10 @@ func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any) (*ModelT, err
 
 	query.Where(fmt.Sprintf("%s.%s = ?", table.SQLAlias, table.PKs[0].SQLName), id)
 
+	if queryFn != nil {
+		queryFn(query)
+	}
+
 	err = query.Scan(ctx)
 	if err != nil {
 		return nil, errs.Wrap(err, "scanning model")
@@ -109,7 +111,7 @@ func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any) (*ModelT, err
 	return &model, nil
 }
 
-func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skipLocked bool) (*ModelT, error) {
+func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skipLocked bool, queryFn func(q *bun.SelectQuery)) (*ModelT, error) {
 	var model ModelT
 	query, table, err := SelectForUpdateQuery(ctx, db, &model, skipLocked)
 	if err != nil {
@@ -121,6 +123,10 @@ func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skip
 	}
 
 	query.Where(fmt.Sprintf("%s.%s = ?", table.SQLAlias, table.PKs[0].SQLName), id)
+
+	if queryFn != nil {
+		queryFn(query)
+	}
 
 	err = query.Scan(ctx)
 	if err != nil {
@@ -220,23 +226,6 @@ func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn 
 	}
 
 	return nil
-}
-
-func relations(query *bun.SelectQuery, table *schema.Table, parent string) {
-	for _, relation := range table.Relations {
-		var relationName string
-		if len(parent) > 0 {
-			relationName = parent + "." + relation.Field.GoName
-		} else {
-			relationName = relation.Field.GoName
-		}
-
-		query.Relation(relationName)
-
-		if relation.JoinTable != nil {
-			relations(query, relation.JoinTable, relationName)
-		}
-	}
 }
 
 func Trx(ctx context.Context, db bun.IDB, fn func(ctx context.Context, tx bun.IDB) error) error {
