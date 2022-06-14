@@ -290,10 +290,34 @@ func TestStore_FindByID(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	model, err := FindByID[testModel](context.Background(), db, insertModel.ID)
+	model, err := FindByID[testModel](context.Background(), db, insertModel.ID, nil)
 	assert.NoError(err)
 
 	assert.Equal(insertModel, model)
+}
+
+func TestStore_FindByID_query(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	qLogger := &queryLogger{}
+	db.AddQueryHook(qLogger)
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	model, err := FindByID[testModel](context.Background(), db, insertModel.ID, func(q *bun.SelectQuery) {
+		q.Where("1 = 1")
+	})
+	assert.NoError(err)
+	assert.Equal(insertModel, model)
+
+	assert.Len(qLogger.queries, 2)
+	assert.Contains(qLogger.queries[1], "1 = 1")
 }
 
 func TestStore_FindByID_not_found(t *testing.T) {
@@ -301,7 +325,7 @@ func TestStore_FindByID_not_found(t *testing.T) {
 
 	db := testDB(t)
 
-	model, err := FindByID[testModel](context.Background(), db, "non-existent-id")
+	model, err := FindByID[testModel](context.Background(), db, "non-existent-id", nil)
 	assert.Nil(model)
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
@@ -320,12 +344,36 @@ func TestStore_FindByIDForUpdate(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, false)
+	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, false, nil)
 	assert.NoError(err)
 	assert.Equal(insertModel, model)
 
 	assert.Len(qLogger.queries, 2)
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model")
+}
+
+func TestStore_FindByIDForUpdate_query(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	qLogger := &queryLogger{}
+	db.AddQueryHook(qLogger)
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, false, func(q *bun.SelectQuery) {
+		q.Where("1 = 1")
+	})
+	assert.NoError(err)
+	assert.Equal(insertModel, model)
+
+	assert.Len(qLogger.queries, 2)
+	assert.Contains(qLogger.queries[1], "1 = 1")
 }
 
 func TestStore_FindByIDForUpdate_skip_locked(t *testing.T) {
@@ -342,7 +390,7 @@ func TestStore_FindByIDForUpdate_skip_locked(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, true)
+	model, err := FindByIDForUpdate[testModel](context.Background(), db, insertModel.ID, true, nil)
 	assert.NoError(err)
 	assert.Equal(insertModel, model)
 
