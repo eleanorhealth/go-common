@@ -3,6 +3,7 @@ package hook
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/eleanorhealth/go-common/pkg/bao"
 	"github.com/eleanorhealth/go-common/pkg/errs"
@@ -17,11 +18,17 @@ func LocalParameterBeforeHook[ModelT any](fn func(ctx context.Context) map[strin
 			vars = fn(ctx)
 		}
 
+		var builder strings.Builder
+		var args []any
+
 		for k, v := range vars {
-			_, err := db.ExecContext(ctx, fmt.Sprintf(`SET LOCAL "%s" = ?`, k), v)
-			if err != nil {
-				return errs.Wrapf(err, "setting local parameter %s", k)
-			}
+			builder.WriteString(fmt.Sprintf(`SET LOCAL "%s" = ?;`, k))
+			args = append(args, v)
+		}
+
+		_, err := db.ExecContext(ctx, builder.String(), args...)
+		if err != nil {
+			return errs.Wrapf(err, "setting local parameters")
 		}
 
 		return nil
