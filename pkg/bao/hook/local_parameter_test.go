@@ -15,12 +15,10 @@ func TestLocalParameterBeforeHook(t *testing.T) {
 	qLogger := &queryLogger{}
 	db.AddQueryHook(qLogger)
 
-	key := "myapp.foo"
-	value := "bar"
-
 	hook := LocalParameterBeforeHook[testModel](func(ctx context.Context) map[string]string {
 		return map[string]string{
-			key: value,
+			"myapp.foo": "bar",
+			"myapp.bar": "baz",
 		}
 	})
 
@@ -29,4 +27,5 @@ func TestLocalParameterBeforeHook(t *testing.T) {
 
 	assert.Len(qLogger.queries, 1)
 	assert.Contains(qLogger.queries[0], `SET LOCAL "myapp.foo" = 'bar'`)
+	assert.Contains(qLogger.queries[0], `SET LOCAL "myapp.bar" = 'baz'`)
 }
