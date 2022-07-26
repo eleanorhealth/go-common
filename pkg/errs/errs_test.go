@@ -29,7 +29,11 @@ func TestCause(t *testing.T) {
 func TestWrap(t *testing.T) {
 	assert := assert.New(t)
 
-	err := errors.New("test")
+	var err error
+	err = Wrap(err, "nil error")
+	assert.Nil(err)
+
+	err = errors.New("test")
 	wrapped := Wrap(err, "test message")
 	unwrapped := errors.Unwrap(wrapped)
 
@@ -39,9 +43,14 @@ func TestWrap(t *testing.T) {
 func TestWrapf(t *testing.T) {
 	assert := assert.New(t)
 
-	err := errors.New("test")
+	var err error
+	err = Wrap(err, "nil error")
+	assert.Nil(err)
+
+	err = errors.New("test")
 	wrapped := Wrapf(err, "this is a wrapped %s", "error")
 	cause := Cause(wrapped)
+
 	assert.Equal(err, cause)
 	assert.Equal("this is a wrapped error: test", wrapped.Error())
 }
