@@ -440,7 +440,7 @@ func TestStore_Save_update(t *testing.T) {
 	assert.Equal(insertModel, model)
 }
 
-func TestStore_WithBeforeSaveHooks_WithAfterSaveHooks(t *testing.T) {
+func TestStore_Save_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -472,7 +472,7 @@ func TestStore_WithBeforeSaveHooks_WithAfterSaveHooks(t *testing.T) {
 	assert.True(afterSaveCalled)
 }
 
-func TestStore_Save_WithBeforeSaveHooks_error(t *testing.T) {
+func TestStore_Save_WithBeforeHooks_error(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -488,6 +488,192 @@ func TestStore_Save_WithBeforeSaveHooks_error(t *testing.T) {
 
 	err := Save(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeSave}, nil)
 	assert.ErrorIs(err, beforeSaveErr)
+}
+
+func TestStore_Create(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+
+	err := Create(context.Background(), db, insertModel, nil, nil)
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Scan(context.Background())
+	assert.NoError(err)
+
+	assert.Equal(insertModel, model)
+}
+
+func TestStore_Create_exists(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+
+	err := Create(context.Background(), db, insertModel, nil, nil)
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Scan(context.Background())
+	assert.NoError(err)
+
+	assert.Equal(insertModel, model)
+
+	err = Create(context.Background(), db, insertModel, nil, nil)
+	pgErr := &pgdriver.Error{}
+	assert.ErrorAs(err, pgErr)
+	assert.True(pgErr.IntegrityViolation())
+}
+
+func TestStore_Create_WithBeforeHooks_WithAfterHooks(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	var beforeCreateCalled bool
+	beforeCreate := func(ctx context.Context, db bun.IDB, model *testModel) error {
+		beforeCreateCalled = true
+		return nil
+	}
+
+	var afterCreateCalled bool
+	afterCreate := func(ctx context.Context, model *testModel) {
+		afterCreateCalled = true
+	}
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+
+	err := Create(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeCreate}, []AfterHook[testModel]{afterCreate})
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Scan(context.Background())
+	assert.NoError(err)
+
+	assert.Equal(insertModel, model)
+	assert.True(beforeCreateCalled)
+	assert.True(afterCreateCalled)
+}
+
+func TestStore_Create_WithBeforeHooks_error(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	var beforeCreateErr = errors.New("test")
+	beforeCreate := func(ctx context.Context, db bun.IDB, model *testModel) error {
+		return beforeCreateErr
+	}
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+
+	err := Create(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeCreate}, nil)
+	assert.ErrorIs(err, beforeCreateErr)
+}
+
+func TestStore_Update(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	insertModel.Name = "foo"
+
+	err = Update(context.Background(), db, insertModel, nil, nil)
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Scan(context.Background())
+	assert.NoError(err)
+
+	assert.Equal(insertModel, model)
+}
+
+func TestStore_Update_not_exists(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+
+	err := Update(context.Background(), db, insertModel, nil, nil)
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Scan(context.Background())
+	assert.ErrorIs(err, sql.ErrNoRows)
+}
+
+func TestStore_Update_WithBeforeHooks_WithAfterHooks(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	var beforeUpdateCalled bool
+	beforeUpdate := func(ctx context.Context, db bun.IDB, model *testModel) error {
+		beforeUpdateCalled = true
+		return nil
+	}
+
+	var afterUpdateCalled bool
+	afterUpdate := func(ctx context.Context, model *testModel) {
+		afterUpdateCalled = true
+	}
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	err = Update(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeUpdate}, []AfterHook[testModel]{afterUpdate})
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Scan(context.Background())
+	assert.NoError(err)
+
+	assert.Equal(insertModel, model)
+	assert.True(beforeUpdateCalled)
+	assert.True(afterUpdateCalled)
+}
+
+func TestStore_Update_WithBeforeHooks_error(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	var beforeUpdateErr = errors.New("test")
+	beforeUpdate := func(ctx context.Context, db bun.IDB, model *testModel) error {
+		return beforeUpdateErr
+	}
+
+	insertModel := &testModel{
+		ID: uuid.New().String(),
+	}
+
+	err := Update(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeUpdate}, nil)
+	assert.ErrorIs(err, beforeUpdateErr)
 }
 
 func TestStore_Delete(t *testing.T) {
@@ -531,7 +717,7 @@ func TestStore_Delete_query(t *testing.T) {
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
-func TestStore_Delete_WithBeforeDeleteHooks_WithAfterDeleteHooks(t *testing.T) {
+func TestStore_Delete_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -564,7 +750,7 @@ func TestStore_Delete_WithBeforeDeleteHooks_WithAfterDeleteHooks(t *testing.T) {
 	assert.True(afterDeleteCalled)
 }
 
-func TestStore_Delete_WithBeforeDeleteHooks_error(t *testing.T) {
+func TestStore_Delete_WithBeforeHooks_error(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
