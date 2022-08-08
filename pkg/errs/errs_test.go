@@ -54,3 +54,43 @@ func TestWrapf(t *testing.T) {
 	assert.Equal(err, cause)
 	assert.Equal("this is a wrapped error: test", wrapped.Error())
 }
+
+func TestIsAny(t *testing.T) {
+	err1 := errors.New("err1")
+	err2 := errors.New("err2")
+	err3 := errors.New("err3")
+
+	type args struct {
+		err  error
+		errs []error
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "none",
+			args: args{
+				err:  err1,
+				errs: []error{err2, err3},
+			},
+			want: false,
+		},
+		{
+			name: "one",
+			args: args{
+				err:  err1,
+				errs: []error{err3, err2, err1},
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsAny(tt.args.err, tt.args.errs...); got != tt.want {
+				t.Errorf("IsAny() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

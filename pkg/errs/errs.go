@@ -14,6 +14,16 @@ func Cause(err error) error {
 	return Cause(unwrapped)
 }
 
+func IsAny(err error, targets ...error) bool {
+	for _, target := range targets {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func Wrap(err error, msg string) error {
 	if err == nil {
 		return nil
