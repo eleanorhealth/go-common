@@ -672,7 +672,10 @@ func TestStore_Update_WithBeforeHooks_error(t *testing.T) {
 		ID: uuid.New().String(),
 	}
 
-	err := Update(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeUpdate}, nil)
+	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	assert.NoError(err)
+
+	err = Update(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeUpdate}, nil)
 	assert.ErrorIs(err, beforeUpdateErr)
 }
 
