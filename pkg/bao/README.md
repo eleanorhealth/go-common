@@ -4,7 +4,7 @@ bao provides a few additional features for [Bun](https://github.com/uptrace/bun)
 
 * Helper functions with type parameters for finding, saving, and deleting models
 * Transaction-aware before and after hooks
-* Nested transaction handling
+* "Nested transaction" handling
 
 ## Basic Usage
 
