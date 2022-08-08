@@ -14,6 +14,8 @@ import (
 type BeforeHook[ModelT any] func(ctx context.Context, db bun.IDB, model *ModelT) error
 type AfterHook[ModelT any] func(ctx context.Context, model *ModelT)
 
+var ErrUpdateNotExists = errors.New("model to be updated does not exist")
+
 func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
 	rType := reflect.TypeOf(model)
 	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
@@ -230,6 +232,15 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 	}
 
 	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
+		exists, err := tx.NewSelect().Model(model).WherePK().Exists(ctx)
+		if err != nil {
+			return errs.Wrap(err, "checking if model exists")
+		}
+
+		if !exists {
+			return ErrUpdateNotExists
+		}
+
 		for _, fn := range befores {
 			err := fn(ctx, tx, model)
 			if err != nil {
@@ -237,7 +248,7 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			}
 		}
 
-		_, err := tx.NewUpdate().Model(model).WherePK().Exec(ctx)
+		_, err = tx.NewUpdate().Model(model).WherePK().Exec(ctx)
 		if err != nil {
 			return errs.Wrap(err, "updating model")
 		}

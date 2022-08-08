@@ -616,7 +616,7 @@ func TestStore_Update_not_exists(t *testing.T) {
 	}
 
 	err := Update(context.Background(), db, insertModel, nil, nil)
-	assert.NoError(err)
+	assert.ErrorIs(err, ErrUpdateNotExists)
 
 	model := &testModel{}
 	err = db.NewSelect().Model(model).Scan(context.Background())
