@@ -14,6 +14,8 @@ import (
 type BeforeHook[ModelT any] func(ctx context.Context, db bun.IDB, model *ModelT) error
 type AfterHook[ModelT any] func(ctx context.Context, model *ModelT)
 
+var ErrUpdateNotExists = errors.New("model to be updated does not exist")
+
 func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
 	rType := reflect.TypeOf(model)
 	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
@@ -169,6 +171,86 @@ func Save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []
 			if err != nil {
 				return errs.Wrap(err, "updating model")
 			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, fn := range afters {
+		fn(ctx, model)
+	}
+
+	return nil
+}
+
+func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+	rType := reflect.TypeOf(model)
+	if rType.Kind() != reflect.Ptr {
+		return ErrModelNotPointer
+	}
+
+	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
+		return ErrModelNotStructSlicePointer
+	}
+
+	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
+		for _, fn := range befores {
+			err := fn(ctx, tx, model)
+			if err != nil {
+				return errs.Wrap(err, "before save hook")
+			}
+		}
+
+		_, err := tx.NewInsert().Model(model).Exec(ctx)
+		if err != nil {
+			return errs.Wrap(err, "inserting model")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, fn := range afters {
+		fn(ctx, model)
+	}
+
+	return nil
+}
+
+func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+	rType := reflect.TypeOf(model)
+	if rType.Kind() != reflect.Ptr {
+		return ErrModelNotPointer
+	}
+
+	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
+		return ErrModelNotStructSlicePointer
+	}
+
+	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
+		exists, err := tx.NewSelect().Model(model).WherePK().Exists(ctx)
+		if err != nil {
+			return errs.Wrap(err, "checking if model exists")
+		}
+
+		if !exists {
+			return ErrUpdateNotExists
+		}
+
+		for _, fn := range befores {
+			err := fn(ctx, tx, model)
+			if err != nil {
+				return errs.Wrap(err, "before save hook")
+			}
+		}
+
+		_, err = tx.NewUpdate().Model(model).WherePK().Exec(ctx)
+		if err != nil {
+			return errs.Wrap(err, "updating model")
 		}
 
 		return nil
