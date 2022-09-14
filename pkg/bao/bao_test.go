@@ -36,7 +36,7 @@ func testDB(t *testing.T) *bun.DB {
 type testModel struct {
 	ID      string `bun:",pk"`
 	Name    string
-	Related *testRelatedModel `bun:"rel:has-one,join:id=test_model_id"`
+	Related *testRelatedModel `bun:"rel:has-one,join:id=test_model_id" bao:",update"`
 }
 
 type testRelatedModel struct {
@@ -54,7 +54,7 @@ func TestStore_SelectQuery_non_struct_slice_pointer(t *testing.T) {
 	query, table, err := SelectQuery(context.Background(), db, &model)
 	assert.Nil(query)
 	assert.Nil(table)
-	assert.ErrorIs(err, ErrModelNotStructSlicePointer)
+	assert.ErrorIs(err, ErrModelNotStructOrSlice)
 }
 
 func TestStore_SelectQuery_struct(t *testing.T) {
@@ -495,15 +495,21 @@ func TestStore_Create(t *testing.T) {
 
 	db := testDB(t)
 
+	id := uuid.New().String()
+
 	insertModel := &testModel{
-		ID: uuid.New().String(),
+		ID: id,
+		Related: &testRelatedModel{
+			ID:          uuid.New().String(),
+			TestModelID: id,
+		},
 	}
 
 	err := Create(context.Background(), db, insertModel, nil, nil)
 	assert.NoError(err)
 
 	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
+	err = db.NewSelect().Model(model).Relation("Related").Scan(context.Background())
 	assert.NoError(err)
 
 	assert.Equal(insertModel, model)
@@ -588,19 +594,25 @@ func TestStore_Update(t *testing.T) {
 
 	db := testDB(t)
 
+	id := uuid.New().String()
+
 	insertModel := &testModel{
-		ID: uuid.New().String(),
+		ID: id,
 	}
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
 	insertModel.Name = "foo"
+	insertModel.Related = &testRelatedModel{
+		ID:          uuid.New().String(),
+		TestModelID: id,
+	}
 
 	err = Update(context.Background(), db, insertModel, nil, nil)
 	assert.NoError(err)
 
 	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
+	err = db.NewSelect().Model(model).Relation("Related").Scan(context.Background())
 	assert.NoError(err)
 
 	assert.Equal(insertModel, model)

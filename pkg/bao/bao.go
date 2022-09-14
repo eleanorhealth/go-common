@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/eleanorhealth/go-common/pkg/errs"
+	"github.com/fatih/structtag"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
 )
@@ -19,7 +20,7 @@ var ErrUpdateNotExists = errors.New("model to be updated does not exist")
 func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
 	rType := reflect.TypeOf(model)
 	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
-		return nil, nil, ErrModelNotStructSlicePointer
+		return nil, nil, ErrModelNotStructOrSlice
 	}
 
 	query := db.NewSelect().Model(model)
@@ -144,8 +145,8 @@ func Save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []
 		return ErrModelNotPointer
 	}
 
-	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
-		return ErrModelNotStructSlicePointer
+	if rType.Elem().Kind() != reflect.Struct {
+		return ErrModelNotStruct
 	}
 
 	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
@@ -192,8 +193,8 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 		return ErrModelNotPointer
 	}
 
-	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
-		return ErrModelNotStructSlicePointer
+	if rType.Elem().Kind() != reflect.Struct {
+		return ErrModelNotStruct
 	}
 
 	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
@@ -208,6 +209,12 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 		if err != nil {
 			return errs.Wrap(err, "inserting model")
 		}
+
+		err = persistRelatedModels(ctx, tx, model)
+		if err != nil {
+			return errs.Wrap(err, "persisting related models")
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -227,8 +234,8 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 		return ErrModelNotPointer
 	}
 
-	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
-		return ErrModelNotStructSlicePointer
+	if rType.Elem().Kind() != reflect.Struct {
+		return ErrModelNotStruct
 	}
 
 	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
@@ -253,6 +260,11 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			return errs.Wrap(err, "updating model")
 		}
 
+		err = persistRelatedModels(ctx, tx, model)
+		if err != nil {
+			return errs.Wrap(err, "persisting related models")
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -272,8 +284,8 @@ func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn 
 		return ErrModelNotPointer
 	}
 
-	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
-		return ErrModelNotStructSlicePointer
+	if rType.Elem().Kind() != reflect.Struct {
+		return ErrModelNotStruct
 	}
 
 	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
@@ -342,6 +354,60 @@ func Trx(ctx context.Context, db bun.IDB, fn func(ctx context.Context, tx bun.ID
 		err = tx.Commit()
 		if err != nil {
 			return errs.Wrap(err, "committing transaction")
+		}
+	}
+
+	return nil
+}
+
+func persistRelatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT) error {
+	modelType := reflect.TypeOf(model).Elem()
+
+	if modelType.Kind() != reflect.Struct {
+		return ErrModelNotStruct
+	}
+
+	table := bun.NewSelect().Model(model).DB().Table(modelType)
+
+	for _, relation := range table.Relations {
+		idx := relation.Field.StructField.Index
+		tag := modelType.FieldByIndex(idx).Tag
+
+		tags, err := structtag.Parse(string(tag))
+		if err != nil {
+			return errs.Wrap(err, "parsing tags")
+		}
+
+		baoTag, err := tags.Get("bao")
+		if err != nil {
+			continue
+		}
+
+		if !baoTag.HasOption("update") {
+			continue
+		}
+
+		insertModel := relation.Field.Value(reflect.ValueOf(*model))
+		if insertModel.IsZero() {
+			continue
+		}
+
+		deleteModel := reflect.New(relation.JoinTable.Type)
+		q := bun.NewDelete().Model(deleteModel.Interface())
+
+		for _, joinField := range relation.JoinFields {
+			baseField := relation.BaseFields[0]
+			q.Where(fmt.Sprintf("%s = ?", string(joinField.SQLName)), baseField.Value(reflect.ValueOf(*model)).Interface())
+		}
+
+		_, err = q.Exec(ctx)
+		if err != nil {
+			return errs.Wrapf(err, "deleting related model (%s)", relation.JoinTable.ModelName)
+		}
+
+		_, err = bun.NewInsert().Model(insertModel.Interface()).Exec(ctx)
+		if err != nil {
+			return errs.Wrapf(err, "inserting related model (%s)", relation.JoinTable.ModelName)
 		}
 	}
 

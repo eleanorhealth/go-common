@@ -2,8 +2,8 @@ version: "3.8"
 
 networks:
   default:
-    external:
-      name: eleanor
+    name: eleanor
+    external: true
 
 services:
   common:
