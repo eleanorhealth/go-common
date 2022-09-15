@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eleanorhealth/go-common/pkg/bao"
 	"github.com/eleanorhealth/go-common/pkg/errs"
 	"github.com/uptrace/bun"
 )
 
-func LocalParameterBeforeHook[ModelT any](fn func(ctx context.Context) map[string]string) bao.BeforeHook[ModelT] {
+func LocalParameterBeforeHook[ModelT any](fn func(ctx context.Context) map[string]string) Before[ModelT] {
 	return func(ctx context.Context, db bun.IDB, model *ModelT) error {
 		var vars map[string]string
 

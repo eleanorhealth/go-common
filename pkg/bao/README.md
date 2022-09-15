@@ -3,8 +3,9 @@
 bao provides a few additional features for [Bun](https://github.com/uptrace/bun):
 
 * Helper functions with type parameters for finding, saving, and deleting models
-* Transaction-aware before and after hooks
+* Transaction-aware before and after hooks for create, update, and delete operations
 * "Nested transaction" handling
+* A store/repository that provides support for persisting domain entities
 
 ## Basic Usage
 
@@ -22,7 +23,7 @@ newUser := &user{
 }
 
 // db is a *bun.DB
-err := bao.Save(context.Background(), db, newUser, nil, nil)
+err := bao.Create(context.Background(), db, newUser, nil, nil)
 if err != nil {
     log.Fatal(err)
 }
@@ -53,12 +54,12 @@ newUser := &user{
 }
 
 // db is a *bun.DB
-err := bao.Save(
+err := bao.Create(
     context.Background(),
     db,
     newUser,
-    []bao.BeforeHook[user]{myBeforeSaveHook},
-    []bao.AfterHook[user]{myAfterSaveHook},
+    []hook.Before[user]{myBeforeSave},
+    []hook.After[user]{myAfterSave},
 )
 if err != nil {
     log.Fatal(err)

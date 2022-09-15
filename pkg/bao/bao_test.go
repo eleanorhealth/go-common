@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eleanorhealth/go-common/pkg/bao/hook"
 	"github.com/eleanorhealth/go-common/pkg/env"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,7 @@ func testDB(t *testing.T) *bun.DB {
 type testModel struct {
 	ID      string `bun:",pk"`
 	Name    string
-	Related *testRelatedModel `bun:"rel:has-one,join:id=test_model_id"`
+	Related *testRelatedModel `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
 }
 
 type testRelatedModel struct {
@@ -44,7 +45,7 @@ type testRelatedModel struct {
 	TestModelID string
 }
 
-func TestStore_SelectQuery_non_struct_slice_pointer(t *testing.T) {
+func TestSelectQuery_non_struct_slice_pointer(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -54,10 +55,10 @@ func TestStore_SelectQuery_non_struct_slice_pointer(t *testing.T) {
 	query, table, err := SelectQuery(context.Background(), db, &model)
 	assert.Nil(query)
 	assert.Nil(table)
-	assert.ErrorIs(err, ErrModelNotStructSlicePointer)
+	assert.ErrorIs(err, ErrModelNotStructOrSlice)
 }
 
-func TestStore_SelectQuery_struct(t *testing.T) {
+func TestSelectQuery_struct(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -89,7 +90,7 @@ func TestStore_SelectQuery_struct(t *testing.T) {
 	assert.NotNil(model.Related)
 }
 
-func TestStore_SelectQuery_slice(t *testing.T) {
+func TestSelectQuery_slice(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -121,7 +122,7 @@ func TestStore_SelectQuery_slice(t *testing.T) {
 	assert.NotNil(model[0].Related)
 }
 
-func TestStore_SelectForUpdateQuery(t *testing.T) {
+func TestSelectForUpdateQuery(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -148,7 +149,7 @@ func TestStore_SelectForUpdateQuery(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model")
 }
 
-func TestStore_SelectForUpdateQuery_skip_locked(t *testing.T) {
+func TestSelectForUpdateQuery_skip_locked(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -175,7 +176,7 @@ func TestStore_SelectForUpdateQuery_skip_locked(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model SKIP LOCKED")
 }
 
-func TestStore_Find(t *testing.T) {
+func TestFind(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -202,7 +203,7 @@ func TestStore_Find(t *testing.T) {
 	assert.Contains(ids, insertModel2.ID)
 }
 
-func TestStore_Find_query(t *testing.T) {
+func TestFind_query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -231,7 +232,7 @@ func TestStore_Find_query(t *testing.T) {
 	assert.Equal(insertModel, model[0])
 }
 
-func TestStore_Find_not_found(t *testing.T) {
+func TestFind_not_found(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -242,7 +243,7 @@ func TestStore_Find_not_found(t *testing.T) {
 	assert.Len(model, 0)
 }
 
-func TestStore_FindFirst_query(t *testing.T) {
+func TestFindFirst_query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -269,7 +270,7 @@ func TestStore_FindFirst_query(t *testing.T) {
 	assert.Equal(insertModel, model)
 }
 
-func TestStore_FindFirst_not_found(t *testing.T) {
+func TestFindFirst_not_found(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -279,7 +280,7 @@ func TestStore_FindFirst_not_found(t *testing.T) {
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
-func TestStore_FindByID(t *testing.T) {
+func TestFindByID(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -296,7 +297,7 @@ func TestStore_FindByID(t *testing.T) {
 	assert.Equal(insertModel, model)
 }
 
-func TestStore_FindByID_query(t *testing.T) {
+func TestFindByID_query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -320,7 +321,7 @@ func TestStore_FindByID_query(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "1 = 1")
 }
 
-func TestStore_FindByID_not_found(t *testing.T) {
+func TestFindByID_not_found(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -330,7 +331,7 @@ func TestStore_FindByID_not_found(t *testing.T) {
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
-func TestStore_FindByIDForUpdate(t *testing.T) {
+func TestFindByIDForUpdate(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -352,7 +353,7 @@ func TestStore_FindByIDForUpdate(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model")
 }
 
-func TestStore_FindByIDForUpdate_query(t *testing.T) {
+func TestFindByIDForUpdate_query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -376,7 +377,7 @@ func TestStore_FindByIDForUpdate_query(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "1 = 1")
 }
 
-func TestStore_FindByIDForUpdate_skip_locked(t *testing.T) {
+func TestFindByIDForUpdate_skip_locked(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -398,118 +399,32 @@ func TestStore_FindByIDForUpdate_skip_locked(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model SKIP LOCKED")
 }
 
-func TestStore_Save(t *testing.T) {
+func TestCreate(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
 
-	insertModel := &testModel{
-		ID: uuid.New().String(),
-	}
-
-	err := Save(context.Background(), db, insertModel, nil, nil)
-	assert.NoError(err)
-
-	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
-	assert.NoError(err)
-
-	assert.Equal(insertModel, model)
-}
-
-func TestStore_Save_update(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
+	id := uuid.New().String()
 
 	insertModel := &testModel{
-		ID: uuid.New().String(),
-	}
-	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
-	assert.NoError(err)
-
-	insertModel.Name = "foo"
-
-	err = Save(context.Background(), db, insertModel, nil, nil)
-	assert.NoError(err)
-
-	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
-	assert.NoError(err)
-
-	assert.Equal(insertModel, model)
-}
-
-func TestStore_Save_WithBeforeHooks_WithAfterHooks(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
-
-	var beforeSaveCalled bool
-	beforeSave := func(ctx context.Context, db bun.IDB, model *testModel) error {
-		beforeSaveCalled = true
-		return nil
-	}
-
-	var afterSaveCalled bool
-	afterSave := func(ctx context.Context, model *testModel) {
-		afterSaveCalled = true
-	}
-
-	insertModel := &testModel{
-		ID: uuid.New().String(),
-	}
-
-	err := Save(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeSave}, []AfterHook[testModel]{afterSave})
-	assert.NoError(err)
-
-	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
-	assert.NoError(err)
-
-	assert.Equal(insertModel, model)
-	assert.True(beforeSaveCalled)
-	assert.True(afterSaveCalled)
-}
-
-func TestStore_Save_WithBeforeHooks_error(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
-
-	var beforeSaveErr = errors.New("test")
-	beforeSave := func(ctx context.Context, db bun.IDB, model *testModel) error {
-		return beforeSaveErr
-	}
-
-	insertModel := &testModel{
-		ID: uuid.New().String(),
-	}
-
-	err := Save(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeSave}, nil)
-	assert.ErrorIs(err, beforeSaveErr)
-}
-
-func TestStore_Create(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
-
-	insertModel := &testModel{
-		ID: uuid.New().String(),
+		ID: id,
+		Related: &testRelatedModel{
+			ID:          uuid.New().String(),
+			TestModelID: id,
+		},
 	}
 
 	err := Create(context.Background(), db, insertModel, nil, nil)
 	assert.NoError(err)
 
 	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
+	err = db.NewSelect().Model(model).Relation("Related").Scan(context.Background())
 	assert.NoError(err)
 
 	assert.Equal(insertModel, model)
 }
 
-func TestStore_Create_exists(t *testing.T) {
+func TestCreate_exists(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -533,7 +448,7 @@ func TestStore_Create_exists(t *testing.T) {
 	assert.True(pgErr.IntegrityViolation())
 }
 
-func TestStore_Create_WithBeforeHooks_WithAfterHooks(t *testing.T) {
+func TestCreate_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -553,7 +468,7 @@ func TestStore_Create_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 		ID: uuid.New().String(),
 	}
 
-	err := Create(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeCreate}, []AfterHook[testModel]{afterCreate})
+	err := Create(context.Background(), db, insertModel, []hook.Before[testModel]{beforeCreate}, []hook.After[testModel]{afterCreate})
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -565,7 +480,7 @@ func TestStore_Create_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	assert.True(afterCreateCalled)
 }
 
-func TestStore_Create_WithBeforeHooks_error(t *testing.T) {
+func TestCreate_WithBeforeHooks_error(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -579,34 +494,40 @@ func TestStore_Create_WithBeforeHooks_error(t *testing.T) {
 		ID: uuid.New().String(),
 	}
 
-	err := Create(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeCreate}, nil)
+	err := Create(context.Background(), db, insertModel, []hook.Before[testModel]{beforeCreate}, nil)
 	assert.ErrorIs(err, beforeCreateErr)
 }
 
-func TestStore_Update(t *testing.T) {
+func TestUpdate(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
 
+	id := uuid.New().String()
+
 	insertModel := &testModel{
-		ID: uuid.New().String(),
+		ID: id,
 	}
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
 	insertModel.Name = "foo"
+	insertModel.Related = &testRelatedModel{
+		ID:          uuid.New().String(),
+		TestModelID: id,
+	}
 
 	err = Update(context.Background(), db, insertModel, nil, nil)
 	assert.NoError(err)
 
 	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
+	err = db.NewSelect().Model(model).Relation("Related").Scan(context.Background())
 	assert.NoError(err)
 
 	assert.Equal(insertModel, model)
 }
 
-func TestStore_Update_not_exists(t *testing.T) {
+func TestUpdate_not_exists(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -623,7 +544,7 @@ func TestStore_Update_not_exists(t *testing.T) {
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
-func TestStore_Update_WithBeforeHooks_WithAfterHooks(t *testing.T) {
+func TestUpdate_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -646,7 +567,7 @@ func TestStore_Update_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Update(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeUpdate}, []AfterHook[testModel]{afterUpdate})
+	err = Update(context.Background(), db, insertModel, []hook.Before[testModel]{beforeUpdate}, []hook.After[testModel]{afterUpdate})
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -658,7 +579,7 @@ func TestStore_Update_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	assert.True(afterUpdateCalled)
 }
 
-func TestStore_Update_WithBeforeHooks_error(t *testing.T) {
+func TestUpdate_WithBeforeHooks_error(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -675,30 +596,50 @@ func TestStore_Update_WithBeforeHooks_error(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Update(context.Background(), db, insertModel, []BeforeHook[testModel]{beforeUpdate}, nil)
+	err = Update(context.Background(), db, insertModel, []hook.Before[testModel]{beforeUpdate}, nil)
 	assert.ErrorIs(err, beforeUpdateErr)
 }
 
-func TestStore_Delete(t *testing.T) {
+func TestDelete(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
 
+	id := uuid.New().String()
+	relatedID := uuid.New().String()
 	insertModel := &testModel{
-		ID: uuid.New().String(),
+		ID: id,
+		Related: &testRelatedModel{
+			ID:          relatedID,
+			TestModelID: id,
+		},
 	}
-	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	err := Create(context.Background(), db, insertModel, nil, nil)
+	assert.NoError(err)
+
+	insertModel2 := &testModel{
+		ID: uuid.New().String(),
+		Related: &testRelatedModel{
+			ID:          uuid.New().String(),
+			TestModelID: uuid.New().String(),
+		},
+	}
+	err = Create(context.Background(), db, insertModel2, nil, nil)
 	assert.NoError(err)
 
 	err = Delete(context.Background(), db, insertModel, nil, nil, nil)
 	assert.NoError(err)
 
 	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
+	err = db.NewSelect().Model(model).Where("id = ?", id).Scan(context.Background())
+	assert.ErrorIs(err, sql.ErrNoRows)
+
+	relatedModel := &testRelatedModel{}
+	err = db.NewSelect().Model(relatedModel).Where("id = ?", relatedID).Scan(context.Background())
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
-func TestStore_Delete_query(t *testing.T) {
+func TestDelete_query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -720,7 +661,7 @@ func TestStore_Delete_query(t *testing.T) {
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
-func TestStore_Delete_WithBeforeHooks_WithAfterHooks(t *testing.T) {
+func TestDelete_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -742,7 +683,7 @@ func TestStore_Delete_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Delete(context.Background(), db, insertModel, nil, []BeforeHook[testModel]{beforeDelete}, []AfterHook[testModel]{afterDelete})
+	err = Delete(context.Background(), db, insertModel, nil, []hook.Before[testModel]{beforeDelete}, []hook.After[testModel]{afterDelete})
 	assert.NoError(err)
 
 	model := &testModel{}
@@ -753,7 +694,7 @@ func TestStore_Delete_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	assert.True(afterDeleteCalled)
 }
 
-func TestStore_Delete_WithBeforeHooks_error(t *testing.T) {
+func TestDelete_WithBeforeHooks_error(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -769,11 +710,49 @@ func TestStore_Delete_WithBeforeHooks_error(t *testing.T) {
 	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
 	assert.NoError(err)
 
-	err = Delete(context.Background(), db, insertModel, nil, []BeforeHook[testModel]{beforeDelete}, nil)
+	err = Delete(context.Background(), db, insertModel, nil, []hook.Before[testModel]{beforeDelete}, nil)
 	assert.ErrorIs(err, beforeDeleteErr)
 }
 
-func TestStore_Trx(t *testing.T) {
+func TestCreate_related_model_(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	id := uuid.New().String()
+	insertModel := &testModel{
+		ID: id,
+		Related: &testRelatedModel{
+			ID:          uuid.New().String(),
+			TestModelID: id,
+		},
+	}
+	err := Create(context.Background(), db, insertModel, nil, nil)
+	assert.NoError(err)
+
+	id2 := uuid.New().String()
+	insertModel2 := &testModel{
+		ID: id2,
+		Related: &testRelatedModel{
+			ID:          uuid.New().String(),
+			TestModelID: id2,
+		},
+	}
+	err = Create(context.Background(), db, insertModel2, nil, nil)
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Where("test_model.id = ?", id).Relation("Related").Scan(context.Background())
+	assert.NoError(err)
+	assert.Equal(insertModel, model)
+
+	model = &testModel{}
+	err = db.NewSelect().Model(model).Where("test_model.id = ?", id2).Relation("Related").Scan(context.Background())
+	assert.NoError(err)
+	assert.Equal(insertModel2, model)
+}
+
+func TestTrx(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -807,7 +786,7 @@ func TestStore_Trx(t *testing.T) {
 	assert.Equal(1, commitCount)
 }
 
-func TestStore_Trx_external_tx(t *testing.T) {
+func TestTrx_external_tx(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -847,7 +826,7 @@ func TestStore_Trx_external_tx(t *testing.T) {
 	assert.Equal(1, commitCount)
 }
 
-func TestStore_Trx_nested_transaction(t *testing.T) {
+func TestTrx_nested_transaction(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
