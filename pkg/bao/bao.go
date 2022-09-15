@@ -19,7 +19,7 @@ type relatedModelOp int
 
 const (
 	relatedModelOpUpdate relatedModelOp = iota
-	relatedModelOpDelete relatedModelOp = iota
+	relatedModelOpDelete
 )
 
 func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
