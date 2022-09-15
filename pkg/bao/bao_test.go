@@ -37,7 +37,7 @@ func testDB(t *testing.T) *bun.DB {
 type testModel struct {
 	ID      string `bun:",pk"`
 	Name    string
-	Related *testRelatedModel `bun:"rel:has-one,join:id=test_model_id" bao:",update"`
+	Related *testRelatedModel `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
 }
 
 type testRelatedModel struct {
@@ -399,98 +399,6 @@ func TestFindByIDForUpdate_skip_locked(t *testing.T) {
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model SKIP LOCKED")
 }
 
-func TestSave(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
-
-	insertModel := &testModel{
-		ID: uuid.New().String(),
-	}
-
-	err := Save(context.Background(), db, insertModel, nil, nil)
-	assert.NoError(err)
-
-	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
-	assert.NoError(err)
-
-	assert.Equal(insertModel, model)
-}
-
-func TestSave_update(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
-
-	insertModel := &testModel{
-		ID: uuid.New().String(),
-	}
-	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
-	assert.NoError(err)
-
-	insertModel.Name = "foo"
-
-	err = Save(context.Background(), db, insertModel, nil, nil)
-	assert.NoError(err)
-
-	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
-	assert.NoError(err)
-
-	assert.Equal(insertModel, model)
-}
-
-func TestSave_WithBeforeHooks_WithAfterHooks(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
-
-	var beforeSaveCalled bool
-	beforeSave := func(ctx context.Context, db bun.IDB, model *testModel) error {
-		beforeSaveCalled = true
-		return nil
-	}
-
-	var afterSaveCalled bool
-	afterSave := func(ctx context.Context, model *testModel) {
-		afterSaveCalled = true
-	}
-
-	insertModel := &testModel{
-		ID: uuid.New().String(),
-	}
-
-	err := Save(context.Background(), db, insertModel, []hook.Before[testModel]{beforeSave}, []hook.After[testModel]{afterSave})
-	assert.NoError(err)
-
-	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
-	assert.NoError(err)
-
-	assert.Equal(insertModel, model)
-	assert.True(beforeSaveCalled)
-	assert.True(afterSaveCalled)
-}
-
-func TestSave_WithBeforeHooks_error(t *testing.T) {
-	assert := assert.New(t)
-
-	db := testDB(t)
-
-	var beforeSaveErr = errors.New("test")
-	beforeSave := func(ctx context.Context, db bun.IDB, model *testModel) error {
-		return beforeSaveErr
-	}
-
-	insertModel := &testModel{
-		ID: uuid.New().String(),
-	}
-
-	err := Save(context.Background(), db, insertModel, []hook.Before[testModel]{beforeSave}, nil)
-	assert.ErrorIs(err, beforeSaveErr)
-}
-
 func TestCreate(t *testing.T) {
 	assert := assert.New(t)
 
@@ -697,17 +605,37 @@ func TestDelete(t *testing.T) {
 
 	db := testDB(t)
 
+	id := uuid.New().String()
+	relatedID := uuid.New().String()
 	insertModel := &testModel{
-		ID: uuid.New().String(),
+		ID: id,
+		Related: &testRelatedModel{
+			ID:          relatedID,
+			TestModelID: id,
+		},
 	}
-	_, err := db.NewInsert().Model(insertModel).Exec(context.Background())
+	err := Create(context.Background(), db, insertModel, nil, nil)
+	assert.NoError(err)
+
+	insertModel2 := &testModel{
+		ID: uuid.New().String(),
+		Related: &testRelatedModel{
+			ID:          uuid.New().String(),
+			TestModelID: uuid.New().String(),
+		},
+	}
+	err = Create(context.Background(), db, insertModel2, nil, nil)
 	assert.NoError(err)
 
 	err = Delete(context.Background(), db, insertModel, nil, nil, nil)
 	assert.NoError(err)
 
 	model := &testModel{}
-	err = db.NewSelect().Model(model).Scan(context.Background())
+	err = db.NewSelect().Model(model).Where("id = ?", id).Scan(context.Background())
+	assert.ErrorIs(err, sql.ErrNoRows)
+
+	relatedModel := &testRelatedModel{}
+	err = db.NewSelect().Model(relatedModel).Where("id = ?", relatedID).Scan(context.Background())
 	assert.ErrorIs(err, sql.ErrNoRows)
 }
 
@@ -784,6 +712,44 @@ func TestDelete_WithBeforeHooks_error(t *testing.T) {
 
 	err = Delete(context.Background(), db, insertModel, nil, []hook.Before[testModel]{beforeDelete}, nil)
 	assert.ErrorIs(err, beforeDeleteErr)
+}
+
+func TestCreate_related_model_(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	id := uuid.New().String()
+	insertModel := &testModel{
+		ID: id,
+		Related: &testRelatedModel{
+			ID:          uuid.New().String(),
+			TestModelID: id,
+		},
+	}
+	err := Create(context.Background(), db, insertModel, nil, nil)
+	assert.NoError(err)
+
+	id2 := uuid.New().String()
+	insertModel2 := &testModel{
+		ID: id2,
+		Related: &testRelatedModel{
+			ID:          uuid.New().String(),
+			TestModelID: id2,
+		},
+	}
+	err = Create(context.Background(), db, insertModel2, nil, nil)
+	assert.NoError(err)
+
+	model := &testModel{}
+	err = db.NewSelect().Model(model).Where("test_model.id = ?", id).Relation("Related").Scan(context.Background())
+	assert.NoError(err)
+	assert.Equal(insertModel, model)
+
+	model = &testModel{}
+	err = db.NewSelect().Model(model).Where("test_model.id = ?", id2).Relation("Related").Scan(context.Background())
+	assert.NoError(err)
+	assert.Equal(insertModel2, model)
 }
 
 func TestTrx(t *testing.T) {

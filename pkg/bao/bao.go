@@ -15,6 +15,13 @@ import (
 
 var ErrUpdateNotExists = errors.New("model to be updated does not exist")
 
+type relatedModelOp int
+
+const (
+	relatedModelOpUpdate relatedModelOp = iota
+	relatedModelOpDelete relatedModelOp = iota
+)
+
 func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
 	rType := reflect.TypeOf(model)
 	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
@@ -137,60 +144,8 @@ func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skip
 	return &model, nil
 }
 
-func Save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
-	rType := reflect.TypeOf(model)
-	if rType.Kind() != reflect.Ptr {
-		return ErrModelNotPointer
-	}
-
-	if rType.Elem().Kind() != reflect.Struct {
-		return ErrModelNotStruct
-	}
-
-	err := Trx(ctx, db, func(ctx context.Context, tx bun.IDB) error {
-		for _, fn := range befores {
-			err := fn(ctx, tx, model)
-			if err != nil {
-				return errs.Wrap(err, "before save hook")
-			}
-		}
-
-		exists, err := tx.NewSelect().Model(model).WherePK().Exists(ctx)
-		if err != nil {
-			return errs.Wrap(err, "checking if model exists")
-		}
-
-		if !exists {
-			_, err := tx.NewInsert().Model(model).Exec(ctx)
-			if err != nil {
-				return errs.Wrap(err, "inserting model")
-			}
-		} else {
-			_, err := tx.NewUpdate().Model(model).WherePK().Exec(ctx)
-			if err != nil {
-				return errs.Wrap(err, "updating model")
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	for _, fn := range afters {
-		fn(ctx, model)
-	}
-
-	return nil
-}
-
 func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
 	rType := reflect.TypeOf(model)
-	if rType.Kind() != reflect.Ptr {
-		return ErrModelNotPointer
-	}
-
 	if rType.Elem().Kind() != reflect.Struct {
 		return ErrModelNotStruct
 	}
@@ -208,9 +163,9 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			return errs.Wrap(err, "inserting model")
 		}
 
-		err = persistRelatedModels(ctx, tx, model)
+		err = relatedModels(ctx, tx, model, relatedModelOpUpdate)
 		if err != nil {
-			return errs.Wrap(err, "persisting related models")
+			return errs.Wrap(err, "creating related models")
 		}
 
 		return nil
@@ -228,10 +183,6 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 
 func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
 	rType := reflect.TypeOf(model)
-	if rType.Kind() != reflect.Ptr {
-		return ErrModelNotPointer
-	}
-
 	if rType.Elem().Kind() != reflect.Struct {
 		return ErrModelNotStruct
 	}
@@ -258,9 +209,9 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			return errs.Wrap(err, "updating model")
 		}
 
-		err = persistRelatedModels(ctx, tx, model)
+		err = relatedModels(ctx, tx, model, relatedModelOpUpdate)
 		if err != nil {
-			return errs.Wrap(err, "persisting related models")
+			return errs.Wrap(err, "updating related models")
 		}
 
 		return nil
@@ -278,10 +229,6 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 
 func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn func(q *bun.DeleteQuery), befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
 	rType := reflect.TypeOf(model)
-	if rType.Kind() != reflect.Ptr {
-		return ErrModelNotPointer
-	}
-
 	if rType.Elem().Kind() != reflect.Struct {
 		return ErrModelNotStruct
 	}
@@ -305,6 +252,11 @@ func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn 
 		_, err := query.Exec(ctx)
 		if err != nil {
 			return errs.Wrap(err, "deleting model")
+		}
+
+		err = relatedModels(ctx, tx, model, relatedModelOpDelete)
+		if err != nil {
+			return errs.Wrap(err, "deleting related models")
 		}
 
 		return nil
@@ -358,7 +310,7 @@ func Trx(ctx context.Context, db bun.IDB, fn func(ctx context.Context, tx bun.ID
 	return nil
 }
 
-func persistRelatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT) error {
+func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, op relatedModelOp) error {
 	modelType := reflect.TypeOf(model).Elem()
 
 	if modelType.Kind() != reflect.Struct {
@@ -381,12 +333,7 @@ func persistRelatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *M
 			continue
 		}
 
-		if !baoTag.HasOption("update") {
-			continue
-		}
-
-		insertModel := relation.Field.Value(reflect.ValueOf(*model))
-		if insertModel.IsZero() {
+		if !baoTag.HasOption("persist") {
 			continue
 		}
 
@@ -401,6 +348,16 @@ func persistRelatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *M
 		_, err = q.Exec(ctx)
 		if err != nil {
 			return errs.Wrapf(err, "deleting related model (%s)", relation.JoinTable.ModelName)
+		}
+
+		// Return early if the operation is to delete.
+		if op == relatedModelOpDelete {
+			return nil
+		}
+
+		insertModel := relation.Field.Value(reflect.ValueOf(*model))
+		if insertModel.IsZero() {
+			continue
 		}
 
 		_, err = bun.NewInsert().Model(insertModel.Interface()).Exec(ctx)
