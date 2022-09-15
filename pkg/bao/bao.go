@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/eleanorhealth/go-common/pkg/bao/hook"
 	"github.com/eleanorhealth/go-common/pkg/errs"
 	"github.com/fatih/structtag"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
 )
-
-type BeforeHook[ModelT any] func(ctx context.Context, db bun.IDB, model *ModelT) error
-type AfterHook[ModelT any] func(ctx context.Context, model *ModelT)
 
 var ErrUpdateNotExists = errors.New("model to be updated does not exist")
 
@@ -139,7 +137,7 @@ func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skip
 	return &model, nil
 }
 
-func Save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+func Save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
 	rType := reflect.TypeOf(model)
 	if rType.Kind() != reflect.Ptr {
 		return ErrModelNotPointer
@@ -187,7 +185,7 @@ func Save[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []
 	return nil
 }
 
-func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
 	rType := reflect.TypeOf(model)
 	if rType.Kind() != reflect.Ptr {
 		return ErrModelNotPointer
@@ -228,7 +226,7 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 	return nil
 }
 
-func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
 	rType := reflect.TypeOf(model)
 	if rType.Kind() != reflect.Ptr {
 		return ErrModelNotPointer
@@ -278,7 +276,7 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 	return nil
 }
 
-func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn func(q *bun.DeleteQuery), befores []BeforeHook[ModelT], afters []AfterHook[ModelT]) error {
+func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn func(q *bun.DeleteQuery), befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
 	rType := reflect.TypeOf(model)
 	if rType.Kind() != reflect.Ptr {
 		return ErrModelNotPointer
