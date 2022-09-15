@@ -28,7 +28,7 @@ func testDB(t *testing.T) *bun.DB {
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 
-	err := db.ResetModel(context.Background(), db, (*testModel)(nil), (*testRelatedModel)(nil))
+	err := db.ResetModel(context.Background(), db, (*testModel)(nil), (*testRelatedModel)(nil), (*testRelatedModelNonPointer)(nil))
 	assert.NoError(err)
 
 	return db
@@ -37,11 +37,16 @@ func testDB(t *testing.T) *bun.DB {
 type testModel struct {
 	ID                string `bun:",pk"`
 	Name              string
-	Related           *testRelatedModel `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
-	RelatedNonPointer testRelatedModel  `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
+	Related           *testRelatedModel          `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
+	RelatedNonPointer testRelatedModelNonPointer `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
 }
 
 type testRelatedModel struct {
+	ID          string `bun:",pk"`
+	TestModelID string
+}
+
+type testRelatedModelNonPointer struct {
 	ID          string `bun:",pk"`
 	TestModelID string
 }
@@ -723,7 +728,7 @@ func TestCreate_related_model_non_pointer(t *testing.T) {
 	id := uuid.New().String()
 	insertModel := &testModel{
 		ID: id,
-		RelatedNonPointer: testRelatedModel{
+		RelatedNonPointer: testRelatedModelNonPointer{
 			ID:          uuid.New().String(),
 			TestModelID: id,
 		},
@@ -734,7 +739,7 @@ func TestCreate_related_model_non_pointer(t *testing.T) {
 	id2 := uuid.New().String()
 	insertModel2 := &testModel{
 		ID: id2,
-		RelatedNonPointer: testRelatedModel{
+		RelatedNonPointer: testRelatedModelNonPointer{
 			ID:          uuid.New().String(),
 			TestModelID: id2,
 		},
