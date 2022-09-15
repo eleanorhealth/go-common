@@ -35,9 +35,10 @@ func testDB(t *testing.T) *bun.DB {
 }
 
 type testModel struct {
-	ID      string `bun:",pk"`
-	Name    string
-	Related *testRelatedModel `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
+	ID                string `bun:",pk"`
+	Name              string
+	Related           *testRelatedModel `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
+	RelatedNonPointer testRelatedModel  `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
 }
 
 type testRelatedModel struct {
@@ -714,7 +715,7 @@ func TestDelete_WithBeforeHooks_error(t *testing.T) {
 	assert.ErrorIs(err, beforeDeleteErr)
 }
 
-func TestCreate_related_model_(t *testing.T) {
+func TestCreate_related_model_non_pointer(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
@@ -722,7 +723,7 @@ func TestCreate_related_model_(t *testing.T) {
 	id := uuid.New().String()
 	insertModel := &testModel{
 		ID: id,
-		Related: &testRelatedModel{
+		RelatedNonPointer: testRelatedModel{
 			ID:          uuid.New().String(),
 			TestModelID: id,
 		},
@@ -733,7 +734,7 @@ func TestCreate_related_model_(t *testing.T) {
 	id2 := uuid.New().String()
 	insertModel2 := &testModel{
 		ID: id2,
-		Related: &testRelatedModel{
+		RelatedNonPointer: testRelatedModel{
 			ID:          uuid.New().String(),
 			TestModelID: id2,
 		},
@@ -742,12 +743,12 @@ func TestCreate_related_model_(t *testing.T) {
 	assert.NoError(err)
 
 	model := &testModel{}
-	err = db.NewSelect().Model(model).Where("test_model.id = ?", id).Relation("Related").Scan(context.Background())
+	err = db.NewSelect().Model(model).Where("test_model.id = ?", id).Relation("RelatedNonPointer").Scan(context.Background())
 	assert.NoError(err)
 	assert.Equal(insertModel, model)
 
 	model = &testModel{}
-	err = db.NewSelect().Model(model).Where("test_model.id = ?", id2).Relation("Related").Scan(context.Background())
+	err = db.NewSelect().Model(model).Where("test_model.id = ?", id2).Relation("RelatedNonPointer").Scan(context.Background())
 	assert.NoError(err)
 	assert.Equal(insertModel2, model)
 }

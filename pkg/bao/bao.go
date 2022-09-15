@@ -337,6 +337,11 @@ func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, 
 			continue
 		}
 
+		rInsertModel := relation.Field.Value(reflect.ValueOf(*model))
+		if rInsertModel.IsZero() && op == relatedModelOpUpdate {
+			continue
+		}
+
 		deleteModel := reflect.New(relation.JoinTable.Type)
 		q := bun.NewDelete().Model(deleteModel.Interface())
 
@@ -355,12 +360,15 @@ func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, 
 			return nil
 		}
 
-		insertModel := relation.Field.Value(reflect.ValueOf(*model))
-		if insertModel.IsZero() {
-			continue
+		insertModel := rInsertModel.Interface()
+
+		if rInsertModel.Kind() != reflect.Pointer {
+			rInsertModelPtr := reflect.New(rInsertModel.Type())
+			rInsertModelPtr.Elem().Set(rInsertModel)
+			insertModel = rInsertModelPtr.Interface()
 		}
 
-		_, err = bun.NewInsert().Model(insertModel.Interface()).Exec(ctx)
+		_, err = bun.NewInsert().Model(insertModel).Exec(ctx)
 		if err != nil {
 			return errs.Wrapf(err, "inserting related model (%s)", relation.JoinTable.ModelName)
 		}
