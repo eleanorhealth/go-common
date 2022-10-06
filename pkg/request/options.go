@@ -10,23 +10,16 @@ func WithUserAgent(userAgent string) option {
 	}
 }
 
-// WithContentType the content type of the request body
-func WithContentType(contentType string) option {
-	return func(c *client) {
-		c.contentType = contentType
-	}
-}
-
 func WithHTTPClient(httpClient *http.Client) option {
 	return func(c *client) {
 		c.httpClient = httpClient
 	}
 }
 
-func WithTokenAuth(token string) option {
+func WithBearerTokenAuth(bearerToken string) option {
 	return func(c *client) {
-		c.token = token
-		c.authType = authTypeToken
+		c.bearerToken = bearerToken
+		c.authType = authTypeBearerToken
 	}
 }
 

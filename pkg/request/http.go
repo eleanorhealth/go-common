@@ -17,7 +17,7 @@ const (
 	defaultUserAgent = "go-common/request@v" + version
 
 	authTypeBasic authType = iota
-	authTypeToken
+	authTypeBearerToken
 )
 
 type HTTPError struct {
@@ -47,9 +47,8 @@ type ResponseUnmarshaler func(bytes []byte, out any) error
 type client struct {
 	httpClient  *http.Client
 	userAgent   string
-	contentType string
 	baseURL     string
-	token       string
+	bearerToken string
 	basicUser   string
 	basicPass   string
 	authType    authType
@@ -62,10 +61,9 @@ var _ Client = (*client)(nil)
 
 func NewClient(baseURL string, options ...option) *client {
 	c := &client{
-		httpClient:  &http.Client{},
-		userAgent:   defaultUserAgent,
-		contentType: "application/json",
-		baseURL:     strings.TrimSuffix(baseURL, "/"),
+		httpClient: &http.Client{},
+		userAgent:  defaultUserAgent,
+		baseURL:    strings.TrimSuffix(baseURL, "/"),
 	}
 
 	for _, o := range options {
@@ -99,13 +97,12 @@ func (c *client) Request(ctx context.Context, method, path string, body io.Reade
 	}
 
 	req.Header.Add("User-Agent", c.userAgent)
-	req.Header.Add("Content-Type", c.contentType)
 
 	switch c.authType {
 	case authTypeBasic:
 		req.SetBasicAuth(c.basicUser, c.basicPass)
-	case authTypeToken:
-		req.Header.Set("Authorization", c.token)
+	case authTypeBearerToken:
+		req.Header.Set("Authorization", "Bearer "+c.bearerToken)
 	}
 
 	res, err := c.httpClient.Do(req)
@@ -135,26 +132,26 @@ func (c *client) Request(ctx context.Context, method, path string, body io.Reade
 	return res, nil
 }
 
-func (c *client) Get(ctx context.Context, path string, query url.Values, out interface{}) (*http.Response, error) {
+func (c *client) Get(ctx context.Context, path string, query url.Values, headers http.Header, out interface{}) (*http.Response, error) {
 	if len(query) > 0 {
 		path = fmt.Sprintf("%s?%s", path, query.Encode())
 	}
 
-	return c.Request(ctx, http.MethodGet, path, nil, nil, out)
+	return c.Request(ctx, http.MethodGet, path, nil, headers, out)
 }
 
-func (c *client) Post(ctx context.Context, path string, body io.Reader, out interface{}) (*http.Response, error) {
-	return c.Request(ctx, http.MethodPost, path, body, nil, out)
+func (c *client) Post(ctx context.Context, path string, body io.Reader, headers http.Header, out interface{}) (*http.Response, error) {
+	return c.Request(ctx, http.MethodPost, path, body, headers, out)
 }
 
-func (c *client) Put(ctx context.Context, path string, body io.Reader, out interface{}) (*http.Response, error) {
-	return c.Request(ctx, http.MethodPut, path, body, nil, out)
+func (c *client) Put(ctx context.Context, path string, body io.Reader, headers http.Header, out interface{}) (*http.Response, error) {
+	return c.Request(ctx, http.MethodPut, path, body, headers, out)
 }
 
-func (c *client) Patch(ctx context.Context, path string, body io.Reader, out interface{}) (*http.Response, error) {
-	return c.Request(ctx, http.MethodPatch, path, body, nil, out)
+func (c *client) Patch(ctx context.Context, path string, body io.Reader, headers http.Header, out interface{}) (*http.Response, error) {
+	return c.Request(ctx, http.MethodPatch, path, body, headers, out)
 }
 
-func (c *client) Delete(ctx context.Context, path string, body io.Reader, out interface{}) (*http.Response, error) {
-	return c.Request(ctx, http.MethodDelete, path, body, nil, out)
+func (c *client) Delete(ctx context.Context, path string, body io.Reader, headers http.Header, out interface{}) (*http.Response, error) {
+	return c.Request(ctx, http.MethodDelete, path, body, headers, out)
 }

@@ -89,16 +89,8 @@ fmt.Println(items)
 
 ```go
 client := request.NewClient(
-    "https://some-token-authed-api.com",
-    request.WithTokenAuth("Bearer <token-here>"),
-)
-client = request.NewClient(
-    "https://some-token-authed-api.com",
-    request.WithTokenAuth("Token <token-here>"),
-)
-client = request.NewClient(
-    "https://some-token-authed-api.com",
-    request.WithTokenAuth("<token-here>"),
+    "https://some-bearer-token-authed-api.com",
+    request.WithBearerTokenAuth("<token-here>"),
 )
 ```
 
@@ -119,9 +111,9 @@ customHTTPClient := &http.Client{
 }
 
 client := request.NewClient(
-    "https://some-token-authed-api.com",
+    "https://some-bearer-token-authed-api.com",
     request.WithHTTPClient(customHTTPClient),
-    request.WithTokenAuth("Bearer <token-here>"),
+    request.WithBearerTokenAuth("Bearer <token-here>"),
     request.WithErrChecker(func(req *http.Request, res *http.Response) error {
         if res.StatusCode != http.StatusOK {
             return fmt.Errorf("some error occurred %d %s%s", res.StatusCode, req.URL.Host, req.URL.Path)
