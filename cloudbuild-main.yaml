@@ -10,11 +10,11 @@ steps:
         "eleanor"
       ]
 
-  - name: "gcr.io/ele-infra-802395/docker-compose"
+  - name: "gcr.io/cloud-builders/docker"
     args:
       [
-        "-p",
-        "go-common",
+        "compose",
+        "--project-name=go-common",
         "run",
         "common",
         "go",
