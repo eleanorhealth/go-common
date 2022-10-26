@@ -1,0 +1,19 @@
+name: vulnerability-scan
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Build the Container image
+        run: docker build . --file Dockerfile --tag localbuild/testimage:${{ github.sha }}
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.7.1
+        with:
+          image-ref: "localbuild/testimage:${{ github.sha }}"
+          trivy-config: ".trivy.yaml"
