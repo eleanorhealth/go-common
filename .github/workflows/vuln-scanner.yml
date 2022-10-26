@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: Build the Container image
-        run: docker build . --file Dockerfile --tag localbuild/testimage:${{ github.sha }}
+        run: docker build . --no-cache --file Dockerfile --tag localbuild/testimage:${{ github.sha }}
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.7.1
         with:
