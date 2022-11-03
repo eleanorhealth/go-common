@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/eleanorhealth/go-common/pkg/bao/hook"
 	"github.com/eleanorhealth/go-common/pkg/errs"
@@ -158,6 +159,8 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			}
 		}
 
+		autoUpdatedAt(ctx, tx, model)
+
 		_, err := tx.NewInsert().Model(model).Exec(ctx)
 		if err != nil {
 			return errs.Wrap(err, "inserting model")
@@ -203,6 +206,8 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 				return errs.Wrap(err, "before save hook")
 			}
 		}
+
+		autoUpdatedAt(ctx, tx, model)
 
 		_, err = tx.NewUpdate().Model(model).WherePK().Exec(ctx)
 		if err != nil {
@@ -372,6 +377,52 @@ func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, 
 		_, err = bun.NewInsert().Model(insertModel).Exec(ctx)
 		if err != nil {
 			return errs.Wrapf(err, "inserting related model (%s)", relation.JoinTable.ModelName)
+		}
+	}
+
+	return nil
+}
+
+// TODO: should this be aware of bun.NullTime? https://bun.uptrace.dev/guide/models.html#automatic-timestamps
+func autoUpdatedAt[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT) error {
+	modelType := reflect.TypeOf(model).Elem()
+	modelValue := reflect.ValueOf(model).Elem()
+
+	if modelType.Kind() != reflect.Struct {
+		return ErrModelNotStruct
+	}
+
+	table := bun.NewSelect().Model(model).DB().Table(modelType)
+
+	for _, field := range table.Fields {
+		idx := field.StructField.Index
+		tag := modelType.FieldByIndex(idx).Tag
+
+		tags, err := structtag.Parse(string(tag))
+		if err != nil {
+			return errs.Wrap(err, "parsing tags")
+		}
+
+		baoTag, err := tags.Get("bao")
+		if err != nil {
+			continue
+		}
+
+		if !baoTag.HasOption("auto_updated_at") {
+			continue
+		}
+
+		autoUpdateFieldValue := modelValue.FieldByIndex(idx)
+		if !autoUpdateFieldValue.CanSet() {
+			continue
+		}
+
+		switch autoUpdateFieldValue.Interface().(type) {
+		case time.Time:
+			autoUpdateFieldValue.Set(reflect.ValueOf(time.Now()))
+		default:
+			// TODO: log about not setting auto_updated_at tag on non time.Time struct fields
+			continue
 		}
 	}
 
