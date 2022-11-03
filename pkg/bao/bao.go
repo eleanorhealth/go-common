@@ -425,7 +425,7 @@ func autoUpdatedAt[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT) 
 
 		switch autoUpdateFieldValue.Interface().(type) {
 		case time.Time:
-			autoUpdateFieldValue.Set(reflect.ValueOf(time.Now()))
+			autoUpdateFieldValue.Set(reflect.ValueOf(time.Now().UTC()))
 		default:
 			// TODO: log about not setting auto_updated_at tag on non time.Time struct fields
 			continue
