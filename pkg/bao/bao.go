@@ -159,9 +159,12 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			}
 		}
 
-		autoUpdatedAt(ctx, tx, model)
+		err := autoUpdatedAt(ctx, tx, model)
+		if err != nil {
+			return errs.Wrap(err, "auto updated at")
+		}
 
-		_, err := tx.NewInsert().Model(model).Exec(ctx)
+		_, err = tx.NewInsert().Model(model).Exec(ctx)
 		if err != nil {
 			return errs.Wrap(err, "inserting model")
 		}
@@ -207,7 +210,10 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			}
 		}
 
-		autoUpdatedAt(ctx, tx, model)
+		err = autoUpdatedAt(ctx, tx, model)
+		if err != nil {
+			return errs.Wrap(err, "auto updated at")
+		}
 
 		_, err = tx.NewUpdate().Model(model).WherePK().Exec(ctx)
 		if err != nil {
