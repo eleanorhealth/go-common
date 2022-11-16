@@ -13,6 +13,7 @@ func TestGet(t *testing.T) {
 	os.Setenv("FOO", "1")
 	assert.Equal("1", Get("FOO", ""))
 	assert.Equal([]byte("1"), Get("FOO", []byte("")))
+	assert.Equal(1, Get("FOO", 0))
 	assert.Equal(true, Get("FOO", false))
 }
 

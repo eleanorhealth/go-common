@@ -11,7 +11,7 @@ const (
 	EnvProd  string = "prod"
 )
 
-func Get[T bool | []byte | string](key string, d T) T {
+func Get[T bool | []byte | int | string](key string, d T) T {
 	v, exists := os.LookupEnv(key)
 	if !exists {
 		return d
@@ -29,6 +29,14 @@ func Get[T bool | []byte | string](key string, d T) T {
 
 	case *[]byte:
 		*ptr = []byte(v)
+
+	case *int:
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return d
+		}
+
+		*ptr = i
 
 	case *string:
 		*ptr = v
