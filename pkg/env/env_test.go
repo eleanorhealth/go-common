@@ -26,6 +26,20 @@ func TestGet_default(t *testing.T) {
 	assert.Equal(true, Get("FOO", true))
 }
 
+func TestGetExists(t *testing.T) {
+	assert := assert.New(t)
+
+	os.Setenv("FOO", "1")
+
+	v, exists := GetExists[string]("FOO")
+	assert.Equal("1", v)
+	assert.True(exists)
+
+	v, exists = GetExists[string]("BAR")
+	assert.Equal("", v)
+	assert.False(exists)
+}
+
 func TestIsLocal(t *testing.T) {
 	assert := assert.New(t)
 

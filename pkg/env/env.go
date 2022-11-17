@@ -45,6 +45,17 @@ func Get[T bool | []byte | int | string](key string, d T) T {
 	return ret
 }
 
+func GetExists[T bool | []byte | int | string](key string) (T, bool) {
+	var v T
+
+	_, exists := os.LookupEnv(key)
+	if !exists {
+		return v, false
+	}
+
+	return Get(key, v), true
+}
+
 func IsLocal() bool {
 	return Get("ENV", "") == EnvLocal
 }
