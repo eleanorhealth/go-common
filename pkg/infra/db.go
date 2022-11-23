@@ -134,7 +134,7 @@ func (s *SQLExecutorQuerier) Query(ctx context.Context, dst any, query string, a
 }
 
 func (s *SQLExecutorQuerier) QueryRow(ctx context.Context, dst any, query string, args ...any) error {
-	err := sqlscan.Select(ctx, s.db, dst, query, args...)
+	err := sqlscan.Get(ctx, s.db, dst, query, args...)
 	if err != nil {
 		return errs.Wrap(err, "querying and scanning row")
 	}

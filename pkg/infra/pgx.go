@@ -73,7 +73,7 @@ func (s *PgxPoolExecutorQuerier) Query(ctx context.Context, dst any, query strin
 }
 
 func (s *PgxPoolExecutorQuerier) QueryRow(ctx context.Context, dst any, query string, args ...any) error {
-	err := pgxscan.Select(ctx, s.pool, dst, query, args...)
+	err := pgxscan.Get(ctx, s.pool, dst, query, args...)
 	if err != nil {
 		return errs.Wrap(err, "querying and scanning row")
 	}
