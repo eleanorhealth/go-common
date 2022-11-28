@@ -18,7 +18,7 @@ func Logger() zerolog.Logger {
 	logger := zerolog.New(os.Stdout)
 
 	if env.Get("ZEROLOG_CONSOLE_WRITER", false) {
-		logger = logger.Output(zerolog.NewConsoleWriter())
+		logger = ConsoleLogger()
 	}
 
 	return logger
