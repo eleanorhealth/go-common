@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type PubSubMessagePublisher interface {
+type PubsubMessagePublisher interface {
 	Publish(ctx context.Context, msg *pubsub.Message) error
 }
 
@@ -21,24 +21,24 @@ func (n *NopPublisher) Publish(ctx context.Context, msg *pubsub.Message) error {
 	return nil
 }
 
-type PubSubPublisher struct {
+type PubsubPublisher struct {
 	t *pubsub.Topic
 }
 
-func NewPubSubPublisher(t *pubsub.Topic) *PubSubPublisher {
-	return &PubSubPublisher{
+func NewPubsubPublisher(t *pubsub.Topic) *PubsubPublisher {
+	return &PubsubPublisher{
 		t: t,
 	}
 }
 
-func (p *PubSubPublisher) Publish(ctx context.Context, msg *pubsub.Message) error {
+func (p *PubsubPublisher) Publish(ctx context.Context, msg *pubsub.Message) error {
 	res := p.t.Publish(ctx, msg)
 	_, err := res.Get(ctx)
 
 	return err
 }
 
-type PubSubMessage struct {
+type PubsubMessage struct {
 	ID         string
 	Data       []byte
 	Attributes map[string]string
@@ -49,7 +49,7 @@ const (
 	pubsubLocalExpirationPolicy = 25 * time.Hour
 )
 
-func InitLocalPubsub(ctx context.Context, client *pubsub.Client, topicID, subID string) (*pubsub.Topic, *pubsub.Subscription, error) {
+func Pubsub(ctx context.Context, client *pubsub.Client, topicID, subID string) (*pubsub.Topic, *pubsub.Subscription, error) {
 	_, err := client.CreateTopic(ctx, topicID)
 	if err != nil && status.Code(err) != codes.AlreadyExists {
 		return nil, nil, errs.Wrap(err, "creating topic")
