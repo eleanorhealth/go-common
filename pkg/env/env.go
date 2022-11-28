@@ -11,7 +11,7 @@ const (
 	EnvProd  string = "prod"
 )
 
-func Get[T bool | []byte | string](key string, d T) T {
+func Get[T bool | []byte | int | string](key string, d T) T {
 	v, exists := os.LookupEnv(key)
 	if !exists {
 		return d
@@ -30,11 +30,30 @@ func Get[T bool | []byte | string](key string, d T) T {
 	case *[]byte:
 		*ptr = []byte(v)
 
+	case *int:
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			return d
+		}
+
+		*ptr = i
+
 	case *string:
 		*ptr = v
 	}
 
 	return ret
+}
+
+func GetExists[T bool | []byte | int | string](key string) (T, bool) {
+	var v T
+
+	_, exists := os.LookupEnv(key)
+	if !exists {
+		return v, false
+	}
+
+	return Get(key, v), true
 }
 
 func IsLocal() bool {

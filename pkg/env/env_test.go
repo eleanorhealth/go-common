@@ -13,6 +13,7 @@ func TestGet(t *testing.T) {
 	os.Setenv("FOO", "1")
 	assert.Equal("1", Get("FOO", ""))
 	assert.Equal([]byte("1"), Get("FOO", []byte("")))
+	assert.Equal(1, Get("FOO", 0))
 	assert.Equal(true, Get("FOO", false))
 }
 
@@ -23,6 +24,20 @@ func TestGet_default(t *testing.T) {
 	assert.Equal("baz", Get("FOO", "baz"))
 	assert.Equal([]byte("baz"), Get("FOO", []byte("baz")))
 	assert.Equal(true, Get("FOO", true))
+}
+
+func TestGetExists(t *testing.T) {
+	assert := assert.New(t)
+
+	os.Setenv("FOO", "1")
+
+	v, exists := GetExists[string]("FOO")
+	assert.Equal("1", v)
+	assert.True(exists)
+
+	v, exists = GetExists[string]("BAR")
+	assert.Equal("", v)
+	assert.False(exists)
 }
 
 func TestIsLocal(t *testing.T) {
