@@ -2,12 +2,8 @@ package infra
 
 import (
 	"context"
-	"time"
 
 	"cloud.google.com/go/pubsub"
-	"github.com/eleanorhealth/go-common/pkg/errs"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type PubsubMessagePublisher interface {
@@ -38,35 +34,51 @@ func (p *PubsubPublisher) Publish(ctx context.Context, msg *pubsub.Message) erro
 	return err
 }
 
-type PubsubMessage struct {
-	ID         string
-	Data       []byte
-	Attributes map[string]string
+type PubsubMessageReceiver interface {
+	Receive(ctx context.Context, f func(context.Context, *PubsubMessage)) error
 }
 
-const (
-	pubsubLocalAckDeadline      = 10 * time.Second
-	pubsubLocalExpirationPolicy = 25 * time.Hour
-)
+type PubsubMessage struct {
+	ID     string
+	AckFn  func()
+	NackFn func()
+	Data   []byte
+}
 
-func Pubsub(ctx context.Context, client *pubsub.Client, topicID, subID string) (*pubsub.Topic, *pubsub.Subscription, error) {
-	_, err := client.CreateTopic(ctx, topicID)
-	if err != nil && status.Code(err) != codes.AlreadyExists {
-		return nil, nil, errs.Wrap(err, "creating topic")
+func (p *PubsubMessage) Ack() {
+	p.AckFn()
+}
+
+func (p *PubsubMessage) Nack() {
+	p.NackFn()
+}
+
+type NopReceiver struct {
+}
+
+func (n *NopReceiver) Receive(ctx context.Context, f func(context.Context, *PubsubMessage)) error {
+	return nil
+}
+
+type PubsubReceiver struct {
+	s *pubsub.Subscription
+}
+
+func NewPubsubReceiver(s *pubsub.Subscription) *PubsubReceiver {
+	return &PubsubReceiver{
+		s: s,
 	}
+}
 
-	topic := client.Topic(topicID)
+func (p *PubsubReceiver) Receive(ctx context.Context, f func(context.Context, *PubsubMessage)) error {
+	return p.s.Receive(ctx, func(pCtx context.Context, pMsg *pubsub.Message) {
+		msg := &PubsubMessage{
+			ID:     pMsg.ID,
+			Data:   pMsg.Data,
+			AckFn:  pMsg.Ack,
+			NackFn: pMsg.Nack,
+		}
 
-	_, err = client.CreateSubscription(ctx, subID, pubsub.SubscriptionConfig{
-		Topic:            topic,
-		AckDeadline:      pubsubLocalAckDeadline,
-		ExpirationPolicy: pubsubLocalExpirationPolicy,
+		f(ctx, msg)
 	})
-	if err != nil && status.Code(err) != codes.AlreadyExists {
-		return nil, nil, errs.Wrap(err, "creating subscription")
-	}
-
-	sub := client.Subscription(subID)
-
-	return topic, sub, nil
 }
