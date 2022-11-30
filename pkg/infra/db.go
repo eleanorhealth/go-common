@@ -10,9 +10,9 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/eleanorhealth/go-common/pkg/env"
 	"github.com/eleanorhealth/go-common/pkg/errs"
-	"github.com/georgysavva/scany/v2/sqlscan"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/georgysavva/scany/sqlscan"
+	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/stdlib"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 )
 
