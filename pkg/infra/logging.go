@@ -25,5 +25,5 @@ func Logger() zerolog.Logger {
 }
 
 func ConsoleLogger() zerolog.Logger {
-	return zerolog.New(zerolog.NewConsoleWriter())
+	return zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
 }
