@@ -5,8 +5,8 @@ import (
 
 	"github.com/avast/retry-go"
 	"github.com/eleanorhealth/go-common/pkg/errs"
-	"github.com/georgysavva/scany/v2/pgxscan"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/georgysavva/scany/pgxscan"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 func PgxPool(ctx context.Context, connString string, traceServiceName string) (*pgxpool.Pool, error) {
@@ -23,7 +23,7 @@ func PgxPool(ctx context.Context, connString string, traceServiceName string) (*
 	// We don't need to worry about setting a default max number of database
 	// connections here because pgx defaults to the greater of 4 or runtime.NumCPU().
 
-	conn, err := pgxpool.NewWithConfig(ctx, config)
+	conn, err := pgxpool.ConnectConfig(ctx, config)
 	if err != nil {
 		return nil, errs.Wrap(err, "creating pool")
 	}
