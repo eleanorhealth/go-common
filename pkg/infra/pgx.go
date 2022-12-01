@@ -6,8 +6,16 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/eleanorhealth/go-common/pkg/errs"
 	"github.com/georgysavva/scany/pgxscan"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
+
+type Pgxer interface {
+	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
+}
 
 func PgxPool(ctx context.Context, connString string, traceServiceName string) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(connString)
@@ -41,21 +49,21 @@ func PgxPool(ctx context.Context, connString string, traceServiceName string) (*
 }
 
 type PgxPoolExecutorQuerier struct {
-	pool *pgxpool.Pool
+	pgxer Pgxer
 }
 
 var _ DBExecutor = (*PgxPoolExecutorQuerier)(nil)
 var _ DBQuerier = (*PgxPoolExecutorQuerier)(nil)
 var _ DBExecutorQuerier = (*PgxPoolExecutorQuerier)(nil)
 
-func NewPgxExecutorQuerier(pool *pgxpool.Pool) *PgxPoolExecutorQuerier {
+func NewPgxExecutorQuerier(pgxer Pgxer) *PgxPoolExecutorQuerier {
 	return &PgxPoolExecutorQuerier{
-		pool: pool,
+		pgxer: pgxer,
 	}
 }
 
 func (s *PgxPoolExecutorQuerier) Execute(ctx context.Context, query string, args ...any) (int64, error) {
-	cmd, err := s.pool.Exec(ctx, query, args...)
+	cmd, err := s.pgxer.Exec(ctx, query, args...)
 	if err != nil {
 		return 0, errs.Wrap(err, "executing query")
 	}
@@ -64,7 +72,7 @@ func (s *PgxPoolExecutorQuerier) Execute(ctx context.Context, query string, args
 }
 
 func (s *PgxPoolExecutorQuerier) Query(ctx context.Context, dst any, query string, args ...any) error {
-	err := pgxscan.Select(ctx, s.pool, dst, query, args...)
+	err := pgxscan.Select(ctx, s.pgxer, dst, query, args...)
 	if err != nil {
 		return errs.Wrap(err, "querying and scanning rows")
 	}
@@ -73,7 +81,7 @@ func (s *PgxPoolExecutorQuerier) Query(ctx context.Context, dst any, query strin
 }
 
 func (s *PgxPoolExecutorQuerier) QueryRow(ctx context.Context, dst any, query string, args ...any) error {
-	err := pgxscan.Get(ctx, s.pool, dst, query, args...)
+	err := pgxscan.Get(ctx, s.pgxer, dst, query, args...)
 	if err != nil {
 		return errs.Wrap(err, "querying and scanning row")
 	}

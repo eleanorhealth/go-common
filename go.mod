@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/cloudsqlconn v1.0.1
 	cloud.google.com/go/pubsub v1.4.0
 	github.com/fatih/structtag v1.2.0
+	github.com/jackc/pgconn v1.13.0
 	github.com/uptrace/bun/dialect/pgdialect v1.1.8
 	github.com/uptrace/bun/driver/pgdriver v1.1.8
 )
@@ -29,7 +30,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.2.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.6.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
-	github.com/jackc/pgconn v1.13.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgproto3/v2 v2.3.1 // indirect

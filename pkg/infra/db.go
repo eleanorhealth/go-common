@@ -21,6 +21,12 @@ const (
 	dbMaxOpenConns = 5
 )
 
+type DBer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
 type DBExecutor interface {
 	Execute(ctx context.Context, query string, args ...any) (int64, error)
 }
@@ -97,14 +103,14 @@ func setCloudSQLInstanceDialFunc(ctx context.Context, config *pgx.ConnConfig) er
 }
 
 type SQLExecutorQuerier struct {
-	db *sql.DB
+	db DBer
 }
 
 var _ DBExecutor = (*SQLExecutorQuerier)(nil)
 var _ DBQuerier = (*SQLExecutorQuerier)(nil)
 var _ DBExecutorQuerier = (*SQLExecutorQuerier)(nil)
 
-func NewSQLExecutorQuerier(db *sql.DB) *SQLExecutorQuerier {
+func NewSQLExecutorQuerier(db DBer) *SQLExecutorQuerier {
 	return &SQLExecutorQuerier{
 		db: db,
 	}
