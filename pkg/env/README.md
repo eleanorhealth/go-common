@@ -9,12 +9,18 @@ fmt.Println(env.Get("FOO", ""))                  // bar
 fmt.Println(env.Get("DOES_NOT_EXIST", "foobar")) // foobar
 fmt.Println(env.Get("FOO", []byte{}))            // [98 97 114]
 
-os.Setenv("ENV", "local")
+env.Setenv("local")
 fmt.Println(env.IsLocal()) // true
 
-os.Setenv("ENV", "qa")
+env.Setenv(env.Env("qa"))
 fmt.Println(env.IsQA()) // true
 
-os.Setenv("ENV", "prod")
+env.Setenv(env.EnvProd)
 fmt.Println(env.IsProd()) // true
+
+env.Setenv("unknown") // panic("invalid env \"unkown\"")
 ```
+
+> Note: an invalid env provided to `env.SetEnv()` results in a panic. Valid envs are `local`, `qa`, and `prod`.
+
+> Note: Calling `env.IsLocal|IsQA|IsProd()` prior to `env.SetEnv()` with a valid env results in a panic.
