@@ -18,7 +18,7 @@ fmt.Println(env.IsQA()) // true
 env.Setenv(env.EnvProd)
 fmt.Println(env.IsProd()) // true
 
-env.Setenv("unknown") // panic("invalid env \"unkown\"")
+env.Setenv("unknown") // panic("invalid env \"unknown\"")
 ```
 
 > Note: an invalid env provided to `env.Setenv()` results in a panic. Valid envs are `local`, `qa`, and `prod`.
