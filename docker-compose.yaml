@@ -20,4 +20,4 @@ services:
       - 3401:5432
     environment:
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=go-common
+      - POSTGRES_DB=go_common
