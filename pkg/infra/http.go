@@ -15,6 +15,8 @@ func HTTPTracedTransport(rt http.RoundTripper, serviceName string) http.RoundTri
 			span.SetTag(ext.SpanType, ext.SpanTypeHTTP)
 			span.SetTag(ext.HTTPMethod, req.Method)
 			span.SetTag(ext.HTTPURL, req.URL.Path)
+			span.SetTag(ext.TargetHost, req.URL.Hostname())
+			span.SetTag(ext.HTTPUserAgent, req.UserAgent())
 		}),
 	}...)
 }
