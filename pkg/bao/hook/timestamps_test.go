@@ -37,8 +37,8 @@ func TestTimestampsBeforeHook_create(t *testing.T) {
 	hook := TimestampsBeforeHook[testModel](true)
 
 	model := &testModel{
-		// Assuming these are preset for some reason
-		// TimestampsBeforeHook will override them by design
+		// Assuming CreatedAt is already set for some reason on a create call
+		// TimestampsBeforeHook will override it with time.Now() by design
 		CreatedAt: time.Now().Add(-time.Hour),
 		UpdatedAt: time.Now().Add(-time.Hour),
 	}
