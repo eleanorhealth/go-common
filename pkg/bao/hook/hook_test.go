@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/eleanorhealth/go-common/pkg/env"
 	"github.com/stretchr/testify/assert"
@@ -24,15 +25,21 @@ func testDB(t *testing.T) *bun.DB {
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 
-	err := db.ResetModel(context.Background(), (*testModel)(nil))
+	_, err := db.NewCreateTable().Model(&testModel{}).IfNotExists().Exec(context.Background())
+	assert.NoError(err)
+
+	err = db.ResetModel(context.Background(), (*testModel)(nil))
 	assert.NoError(err)
 
 	return db
 }
 
 type testModel struct {
-	ID   string `bun:",pk"`
-	Name string
+	ID        string `bun:",pk"`
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	OtherTime time.Time
 }
 
 type queryLogger struct {
