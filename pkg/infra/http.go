@@ -8,7 +8,24 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 )
 
-func HTTPTracedTransport(rt http.RoundTripper, serviceName string) http.RoundTripper {
+type httpTracedTransportBeforeFn func(req *http.Request, span ddtrace.Span)
+type httpTracedTransportConfig struct {
+	before httpTracedTransportBeforeFn
+}
+type HTTPTracedTransportOptionFn func(cfg *httpTracedTransportConfig)
+
+func WithHTTPTracedTransportBefore(before httpTracedTransportBeforeFn) HTTPTracedTransportOptionFn {
+	return func(cfg *httpTracedTransportConfig) {
+		cfg.before = before
+	}
+}
+
+func HTTPTracedTransport(rt http.RoundTripper, serviceName string, optionFns ...HTTPTracedTransportOptionFn) http.RoundTripper {
+	cfg := &httpTracedTransportConfig{}
+	for _, optionFn := range optionFns {
+		optionFn(cfg)
+	}
+
 	return httptrace.WrapRoundTripper(rt, []httptrace.RoundTripperOption{
 		httptrace.WithBefore(func(req *http.Request, span ddtrace.Span) {
 			span.SetTag(ext.ServiceName, serviceName)
@@ -17,6 +34,9 @@ func HTTPTracedTransport(rt http.RoundTripper, serviceName string) http.RoundTri
 			span.SetTag(ext.HTTPURL, req.URL.Path)
 			span.SetTag(ext.TargetHost, req.URL.Hostname())
 			span.SetTag(ext.HTTPUserAgent, req.UserAgent())
+			if cfg.before != nil {
+				cfg.before(req, span)
+			}
 		}),
 	}...)
 }
