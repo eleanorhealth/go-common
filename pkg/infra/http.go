@@ -8,20 +8,20 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 )
 
-type beforeFn func(req *http.Request, span ddtrace.Span)
-type config struct {
-	before beforeFn
+type httpTracedTransportBeforeFn func(req *http.Request, span ddtrace.Span)
+type httpTracedTransportConfig struct {
+	before httpTracedTransportBeforeFn
 }
-type OptionFn func(c *config)
+type HTTPTracedTransportOptionFn func(cfg *httpTracedTransportConfig)
 
-func WithBefore(before beforeFn) OptionFn {
-	return func(c *config) {
-		c.before = before
+func WithHTTPTracedTransportBefore(before httpTracedTransportBeforeFn) HTTPTracedTransportOptionFn {
+	return func(cfg *httpTracedTransportConfig) {
+		cfg.before = before
 	}
 }
 
-func HTTPTracedTransport(rt http.RoundTripper, serviceName string, optionFns ...OptionFn) http.RoundTripper {
-	cfg := &config{}
+func HTTPTracedTransport(rt http.RoundTripper, serviceName string, optionFns ...HTTPTracedTransportOptionFn) http.RoundTripper {
+	cfg := &httpTracedTransportConfig{}
 	for _, optionFn := range optionFns {
 		optionFn(cfg)
 	}
