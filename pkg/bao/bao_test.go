@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eleanorhealth/go-common/pkg/bao/hook"
 	"github.com/eleanorhealth/go-common/pkg/env"
@@ -39,6 +40,7 @@ type testModel struct {
 	Name              string
 	Related           *testRelatedModel          `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
 	RelatedNonPointer testRelatedModelNonPointer `bun:"rel:has-one,join:id=test_model_id" bao:",persist"`
+	UpdatedAt         time.Time                  `bao:",auto_updated_at"`
 }
 
 type testRelatedModel struct {
@@ -427,7 +429,11 @@ func TestCreate(t *testing.T) {
 	err = db.NewSelect().Model(model).Relation("Related").Scan(context.Background())
 	assert.NoError(err)
 
-	assert.Equal(insertModel, model)
+	assert.Equal(insertModel.ID, model.ID)
+	assert.Equal(insertModel.Name, model.Name)
+	assert.Equal(insertModel.Related.ID, model.Related.ID)
+	assert.Equal(insertModel.Related.TestModelID, model.Related.TestModelID)
+	assert.WithinDuration(time.Now(), model.UpdatedAt, time.Second)
 }
 
 func TestCreate_exists(t *testing.T) {
@@ -446,7 +452,8 @@ func TestCreate_exists(t *testing.T) {
 	err = db.NewSelect().Model(model).Scan(context.Background())
 	assert.NoError(err)
 
-	assert.Equal(insertModel, model)
+	assert.Equal(insertModel.ID, model.ID)
+	assert.WithinDuration(time.Now(), model.UpdatedAt, time.Second)
 
 	err = Create(context.Background(), db, insertModel, nil, nil)
 	pgErr := &pgdriver.Error{}
@@ -481,7 +488,8 @@ func TestCreate_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	err = db.NewSelect().Model(model).Scan(context.Background())
 	assert.NoError(err)
 
-	assert.Equal(insertModel, model)
+	assert.Equal(insertModel.ID, model.ID)
+	assert.WithinDuration(time.Now(), model.UpdatedAt, time.Second)
 	assert.True(beforeCreateCalled)
 	assert.True(afterCreateCalled)
 }
@@ -530,7 +538,11 @@ func TestUpdate(t *testing.T) {
 	err = db.NewSelect().Model(model).Relation("Related").Scan(context.Background())
 	assert.NoError(err)
 
-	assert.Equal(insertModel, model)
+	assert.Equal(insertModel.ID, model.ID)
+	assert.Equal(insertModel.Name, model.Name)
+	assert.Equal(insertModel.Related.ID, model.Related.ID)
+	assert.Equal(insertModel.Related.TestModelID, model.Related.TestModelID)
+	assert.WithinDuration(time.Now(), model.UpdatedAt, time.Second)
 }
 
 func TestUpdate_not_exists(t *testing.T) {
@@ -580,7 +592,8 @@ func TestUpdate_WithBeforeHooks_WithAfterHooks(t *testing.T) {
 	err = db.NewSelect().Model(model).Scan(context.Background())
 	assert.NoError(err)
 
-	assert.Equal(insertModel, model)
+	assert.Equal(insertModel.ID, model.ID)
+	assert.WithinDuration(time.Now(), model.UpdatedAt, time.Second)
 	assert.True(beforeUpdateCalled)
 	assert.True(afterUpdateCalled)
 }
@@ -750,12 +763,20 @@ func TestCreate_related_model_non_pointer(t *testing.T) {
 	model := &testModel{}
 	err = db.NewSelect().Model(model).Where("test_model.id = ?", id).Relation("RelatedNonPointer").Scan(context.Background())
 	assert.NoError(err)
-	assert.Equal(insertModel, model)
+	assert.Equal(insertModel.ID, model.ID)
+	assert.Equal(insertModel.Name, model.Name)
+	assert.Equal(insertModel.RelatedNonPointer.ID, model.RelatedNonPointer.ID)
+	assert.Equal(insertModel.RelatedNonPointer.TestModelID, model.RelatedNonPointer.TestModelID)
+	assert.WithinDuration(time.Now(), model.UpdatedAt, time.Second)
 
 	model = &testModel{}
 	err = db.NewSelect().Model(model).Where("test_model.id = ?", id2).Relation("RelatedNonPointer").Scan(context.Background())
 	assert.NoError(err)
-	assert.Equal(insertModel2, model)
+	assert.Equal(insertModel2.ID, model.ID)
+	assert.Equal(insertModel2.Name, model.Name)
+	assert.Equal(insertModel2.RelatedNonPointer.ID, model.RelatedNonPointer.ID)
+	assert.Equal(insertModel2.RelatedNonPointer.TestModelID, model.RelatedNonPointer.TestModelID)
+	assert.WithinDuration(time.Now(), model.UpdatedAt, time.Second)
 }
 
 func TestTrx(t *testing.T) {
