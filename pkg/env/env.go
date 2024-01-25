@@ -1,14 +1,34 @@
 package env
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
 
+var env Env
+
+type Env string
+
+func (e Env) validate() {
+	switch e {
+	case EnvLocal, EnvQA, EnvProd:
+		return
+	default:
+		panic(fmt.Sprintf("invalid env \"%s\"", e))
+	}
+}
+
+func Setenv(e Env) {
+	e.validate()
+
+	env = e
+}
+
 const (
-	EnvLocal string = "local"
-	EnvQA    string = "qa"
-	EnvProd  string = "prod"
+	EnvLocal Env = "local"
+	EnvQA    Env = "qa"
+	EnvProd  Env = "prod"
 )
 
 func Get[T bool | []byte | int | string](key string, defaultVal T) T {
@@ -68,14 +88,20 @@ func GetString(key, defaultVal string) string {
 }
 
 func IsLocal() bool {
-	return Get("ENV", "") == EnvLocal
+	env.validate()
+
+	return env == EnvLocal
 }
 
 func IsQA() bool {
-	return Get("ENV", "") == EnvQA
+	env.validate()
+
+	return env == EnvQA
 }
 
 func IsProd() bool {
-	return Get("ENV", "") == EnvProd
+	env.validate()
+
+	return env == EnvProd
 
 }
