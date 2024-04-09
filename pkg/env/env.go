@@ -11,10 +11,10 @@ const (
 	EnvProd  string = "prod"
 )
 
-func Get[T bool | []byte | int | string](key string, d T) T {
+func Get[T bool | []byte | int | string](key string, defaultVal T) T {
 	v, exists := os.LookupEnv(key)
 	if !exists {
-		return d
+		return defaultVal
 	}
 
 	var ret T
@@ -22,7 +22,7 @@ func Get[T bool | []byte | int | string](key string, d T) T {
 	case *bool:
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			return d
+			return defaultVal
 		}
 
 		*ptr = b
@@ -33,7 +33,7 @@ func Get[T bool | []byte | int | string](key string, d T) T {
 	case *int:
 		i, err := strconv.Atoi(v)
 		if err != nil {
-			return d
+			return defaultVal
 		}
 
 		*ptr = i
@@ -54,6 +54,17 @@ func GetExists[T bool | []byte | int | string](key string) (T, bool) {
 	}
 
 	return Get(key, v), true
+}
+
+// Different from Get[string] in that it returns the default value if the
+// environment variable exists but is empty.
+func GetString(key, defaultVal string) string {
+	val := Get[string](key, defaultVal)
+	if val == "" {
+		return defaultVal
+	}
+
+	return val
 }
 
 func IsLocal() bool {
