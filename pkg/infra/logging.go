@@ -9,6 +9,12 @@ import (
 )
 
 func Logger() zerolog.Logger {
+	level, err := zerolog.ParseLevel(env.Get("LOG_LEVEL", "INFO"))
+	if err != nil {
+		level = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(level)
+
 	// Configure Zerolog to work with Google Cloud Logging.
 	// https://github.com/rs/zerolog/issues/174
 	zerolog.TimestampFieldName = "timestamp"

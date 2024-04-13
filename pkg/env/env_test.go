@@ -11,10 +11,12 @@ func TestGet(t *testing.T) {
 	assert := assert.New(t)
 
 	os.Setenv("FOO", "1")
+	os.Setenv("BAR", "")
 	assert.Equal("1", Get("FOO", ""))
 	assert.Equal([]byte("1"), Get("FOO", []byte("")))
 	assert.Equal(1, Get("FOO", 0))
 	assert.Equal(true, Get("FOO", false))
+	assert.Equal("", Get("BAR", "default"))
 }
 
 func TestGet_default(t *testing.T) {
@@ -38,6 +40,22 @@ func TestGetExists(t *testing.T) {
 	v, exists = GetExists[string]("BAR")
 	assert.Equal("", v)
 	assert.False(exists)
+}
+
+func TestGetString(t *testing.T) {
+	assert := assert.New(t)
+
+	os.Setenv("FOO", "1")
+	os.Setenv("BAR", "")
+
+	v := GetString("FOO", "default1")
+	assert.Equal("1", v)
+
+	v = Get("FOO", "default1")
+	assert.Equal("1", v)
+
+	v = GetString("BAR", "default2")
+	assert.Equal("default2", v)
 }
 
 func TestIsLocal(t *testing.T) {
