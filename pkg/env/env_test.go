@@ -61,7 +61,7 @@ func TestGetString(t *testing.T) {
 func TestIsLocal(t *testing.T) {
 	assert := assert.New(t)
 
-	os.Setenv("ENV", "local")
+	Setenv("local")
 	assert.True(IsLocal())
 	assert.False(IsQA())
 	assert.False(IsProd())
@@ -70,7 +70,7 @@ func TestIsLocal(t *testing.T) {
 func TestIsQA(t *testing.T) {
 	assert := assert.New(t)
 
-	os.Setenv("ENV", "qa")
+	Setenv("qa")
 	assert.False(IsLocal())
 	assert.True(IsQA())
 	assert.False(IsProd())
@@ -79,8 +79,32 @@ func TestIsQA(t *testing.T) {
 func TestIsProd(t *testing.T) {
 	assert := assert.New(t)
 
-	os.Setenv("ENV", "prod")
+	Setenv("prod")
 	assert.False(IsLocal())
 	assert.False(IsQA())
 	assert.True(IsProd())
+}
+
+func TestIsX_panic(t *testing.T) {
+	assert := assert.New(t)
+
+	env = ""
+
+	assert.PanicsWithValue("invalid env \"\"", func() {
+		IsLocal()
+	})
+	assert.PanicsWithValue("invalid env \"\"", func() {
+		IsQA()
+	})
+	assert.PanicsWithValue("invalid env \"\"", func() {
+		IsProd()
+	})
+}
+
+func TestSetenv_panic(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.PanicsWithValue("invalid env \"unknown\"", func() {
+		Setenv("unknown")
+	})
 }

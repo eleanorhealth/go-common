@@ -1,9 +1,27 @@
 package env
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
+
+var env string
+
+func parse(e string) {
+	switch e {
+	case EnvLocal, EnvQA, EnvProd:
+		return
+	default:
+		panic(fmt.Sprintf("invalid env \"%s\"", e))
+	}
+}
+
+func Setenv(e string) {
+	parse(e)
+
+	env = e
+}
 
 const (
 	EnvLocal string = "local"
@@ -68,14 +86,20 @@ func GetString(key, defaultVal string) string {
 }
 
 func IsLocal() bool {
-	return Get("ENV", "") == EnvLocal
+	parse(env)
+
+	return env == EnvLocal
 }
 
 func IsQA() bool {
-	return Get("ENV", "") == EnvQA
+	parse(env)
+
+	return env == EnvQA
 }
 
 func IsProd() bool {
-	return Get("ENV", "") == EnvProd
+	parse(env)
+
+	return env == EnvProd
 
 }
