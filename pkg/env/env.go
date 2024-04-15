@@ -6,11 +6,9 @@ import (
 	"strconv"
 )
 
-var env Env
+var env string
 
-type Env string
-
-func (e Env) validate() {
+func parse(e string) {
 	switch e {
 	case EnvLocal, EnvQA, EnvProd:
 		return
@@ -19,16 +17,16 @@ func (e Env) validate() {
 	}
 }
 
-func Setenv(e Env) {
-	e.validate()
+func Setenv(e string) {
+	parse(e)
 
 	env = e
 }
 
 const (
-	EnvLocal Env = "local"
-	EnvQA    Env = "qa"
-	EnvProd  Env = "prod"
+	EnvLocal string = "local"
+	EnvQA    string = "qa"
+	EnvProd  string = "prod"
 )
 
 func Get[T bool | []byte | int | string](key string, defaultVal T) T {
@@ -88,19 +86,19 @@ func GetString(key, defaultVal string) string {
 }
 
 func IsLocal() bool {
-	env.validate()
+	parse(env)
 
 	return env == EnvLocal
 }
 
 func IsQA() bool {
-	env.validate()
+	parse(env)
 
 	return env == EnvQA
 }
 
 func IsProd() bool {
-	env.validate()
+	parse(env)
 
 	return env == EnvProd
 
