@@ -12,7 +12,7 @@ fmt.Println(env.Get("FOO", []byte{}))            // [98 97 114]
 env.Setenv("local")
 fmt.Println(env.IsLocal()) // true
 
-env.Setenv(env.Env("qa"))
+env.Setenv("qa")
 fmt.Println(env.IsQA()) // true
 
 env.Setenv(env.EnvProd)
