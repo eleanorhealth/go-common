@@ -1,6 +1,6 @@
 module github.com/eleanorhealth/go-common
 
-go 1.21
+go 1.22
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.0.1
