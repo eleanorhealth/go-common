@@ -332,9 +332,19 @@ func TestFindByID_not_found(t *testing.T) {
 
 	db := testDB(t)
 
-	model, err := FindByID[testModel](context.Background(), db, "non-existent-id", nil)
+	model, err := FindByID[testModel](context.Background(), db, "d69aba60-1d01-4f11-a1c5-64fa2d526050", nil)
 	assert.Nil(model)
 	assert.ErrorIs(err, sql.ErrNoRows)
+}
+
+func TestFindByID_invalid_uuid(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	model, err := FindByID[testModel](context.Background(), db, "invalid-id", nil)
+	assert.Nil(model)
+	assert.ErrorIs(err, ErrIDNotUUID)
 }
 
 func TestFindByIDForUpdate(t *testing.T) {
@@ -403,6 +413,15 @@ func TestFindByIDForUpdate_skip_locked(t *testing.T) {
 
 	assert.Len(qLogger.queries, 2)
 	assert.Contains(qLogger.queries[1], "FOR UPDATE OF test_model SKIP LOCKED")
+}
+
+func TestFindByIDForUpdate_invalid_uuid(t *testing.T) {
+	assert := assert.New(t)
+
+	db := testDB(t)
+
+	_, err := FindByIDForUpdate[testModel](context.Background(), db, "not-uuid", true, nil)
+	assert.ErrorIs(err, ErrIDNotUUID)
 }
 
 func TestCreate(t *testing.T) {

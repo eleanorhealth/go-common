@@ -9,17 +9,9 @@ import (
 	"github.com/eleanorhealth/go-common/pkg/bao/hook"
 	"github.com/eleanorhealth/go-common/pkg/errs"
 	"github.com/fatih/structtag"
+	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/schema"
-)
-
-var ErrUpdateNotExists = errors.New("model to be updated does not exist")
-
-type relatedModelOp int
-
-const (
-	relatedModelOpUpdate relatedModelOp = iota
-	relatedModelOpDelete
 )
 
 func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
@@ -105,6 +97,11 @@ func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any, queryFn func(
 		return nil, ErrOnePrimaryKey
 	}
 
+	err = validateID(id)
+	if err != nil {
+		return nil, err
+	}
+
 	query.Where(fmt.Sprintf("%s.%s = ?", table.SQLAlias, table.PKs[0].SQLName), id)
 
 	if queryFn != nil {
@@ -128,6 +125,11 @@ func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skip
 
 	if len(table.PKs) != 1 {
 		return nil, ErrOnePrimaryKey
+	}
+
+	err = validateID(id)
+	if err != nil {
+		return nil, err
 	}
 
 	query.Where(fmt.Sprintf("%s.%s = ?", table.SQLAlias, table.PKs[0].SQLName), id)
@@ -163,7 +165,7 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			return errs.Wrap(err, "inserting model")
 		}
 
-		err = relatedModels(ctx, tx, model, relatedModelOpUpdate)
+		err = relatedModels(ctx, tx, model, false /* update*/)
 		if err != nil {
 			return errs.Wrap(err, "creating related models")
 		}
@@ -209,7 +211,7 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 			return errs.Wrap(err, "updating model")
 		}
 
-		err = relatedModels(ctx, tx, model, relatedModelOpUpdate)
+		err = relatedModels(ctx, tx, model, false /* update*/)
 		if err != nil {
 			return errs.Wrap(err, "updating related models")
 		}
@@ -254,7 +256,7 @@ func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn 
 			return errs.Wrap(err, "deleting model")
 		}
 
-		err = relatedModels(ctx, tx, model, relatedModelOpDelete)
+		err = relatedModels(ctx, tx, model, true /*delete*/)
 		if err != nil {
 			return errs.Wrap(err, "deleting related models")
 		}
@@ -310,7 +312,8 @@ func Trx(ctx context.Context, db bun.IDB, fn func(ctx context.Context, tx bun.ID
 	return nil
 }
 
-func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, op relatedModelOp) error {
+/*delete false means update*/
+func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, delete bool) error {
 	modelType := reflect.TypeOf(model).Elem()
 
 	if modelType.Kind() != reflect.Struct {
@@ -350,8 +353,7 @@ func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, 
 			return errs.Wrapf(err, "deleting related model (%s)", relation.JoinTable.ModelName)
 		}
 
-		// Continue if the operation is to delete.
-		if op == relatedModelOpDelete {
+		if delete {
 			return nil
 		}
 
@@ -373,6 +375,20 @@ func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, 
 		if err != nil {
 			return errs.Wrapf(err, "inserting related model (%s)", relation.JoinTable.ModelName)
 		}
+	}
+
+	return nil
+}
+
+func validateID(id any) error {
+	s, ok := (id).(string)
+	if !ok {
+		return errs.Wrap(ErrIDNotUUID, "not a string")
+	}
+
+	_, err := uuid.Parse(s)
+	if err != nil {
+		return ErrIDNotUUID
 	}
 
 	return nil
