@@ -86,7 +86,7 @@ func FindFirst[ModelT any](ctx context.Context, db bun.IDB, queryFn func(q *bun.
 	return &model, nil
 }
 
-func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any, queryFn func(q *bun.SelectQuery)) (*ModelT, error) {
+func FindByID[ModelT any](ctx context.Context, db bun.IDB, id string, queryFn func(q *bun.SelectQuery)) (*ModelT, error) {
 	var model ModelT
 	query, table, err := SelectQuery(ctx, db, &model)
 	if err != nil {
@@ -116,7 +116,7 @@ func FindByID[ModelT any](ctx context.Context, db bun.IDB, id any, queryFn func(
 	return &model, nil
 }
 
-func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id any, skipLocked bool, queryFn func(q *bun.SelectQuery)) (*ModelT, error) {
+func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id string, skipLocked bool, queryFn func(q *bun.SelectQuery)) (*ModelT, error) {
 	var model ModelT
 	query, table, err := SelectForUpdateQuery(ctx, db, &model, skipLocked)
 	if err != nil {
@@ -380,12 +380,7 @@ func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, 
 	return nil
 }
 
-func validateID(id any) error {
-	s, ok := (id).(string)
-	if !ok {
-		return errs.Wrap(ErrIDNotUUID, "not a string")
-	}
-
+func validateID(s string) error {
 	_, err := uuid.Parse(s)
 	if err != nil {
 		return ErrIDNotUUID
