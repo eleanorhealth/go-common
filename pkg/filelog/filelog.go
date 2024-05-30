@@ -27,7 +27,7 @@ type FileLogger struct {
 var _ Logger = FileLogger{}
 
 func (f FileLogger) Log(msg string) error {
-	file, err := os.OpenFile(f.Path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	file, err := os.OpenFile(f.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm|os.ModeAppend)
 	if err != nil {
 		return errs.Wrap(err, "unable to open file")
 	}
