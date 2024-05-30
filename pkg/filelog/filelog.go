@@ -27,13 +27,13 @@ type FileLogger struct {
 var _ Logger = FileLogger{}
 
 func (f FileLogger) Log(msg string) error {
-	file, err := os.OpenFile(f.Path, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	file, err := os.OpenFile(f.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm|os.ModeAppend)
 	if err != nil {
 		return errs.Wrap(err, "unable to open file")
 	}
 
 	defer file.Close()
-	_, err = io.Copy(file, strings.NewReader(msg))
+	_, err = io.Copy(file, strings.NewReader(msg+"\n"))
 	if err != nil {
 		return errs.Wrap(err, "unable to write to file")
 	}
