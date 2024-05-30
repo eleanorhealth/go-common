@@ -33,7 +33,7 @@ func (f FileLogger) Log(msg string) error {
 	}
 
 	defer file.Close()
-	_, err = io.Copy(file, strings.NewReader(msg))
+	_, err = io.Copy(file, strings.NewReader(msg+"\n"))
 	if err != nil {
 		return errs.Wrap(err, "unable to write to file")
 	}
