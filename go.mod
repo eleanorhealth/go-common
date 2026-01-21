@@ -2,6 +2,8 @@ module github.com/eleanorhealth/go-common
 
 go 1.24.0
 
+toolchain go1.24.2
+
 require (
 	cloud.google.com/go/cloudsqlconn v1.0.1
 	cloud.google.com/go/pubsub v1.33.0
