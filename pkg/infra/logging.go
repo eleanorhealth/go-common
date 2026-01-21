@@ -8,8 +8,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func Logger() zerolog.Logger {
-	level, err := zerolog.ParseLevel(env.Get("LOG_LEVEL", "INFO"))
+func Logger(envKey, fallback string) zerolog.Logger {
+	level, err := zerolog.ParseLevel(env.Get(envKey, fallback))
 	if err != nil {
 		level = zerolog.InfoLevel
 	}
