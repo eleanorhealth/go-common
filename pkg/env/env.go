@@ -77,7 +77,7 @@ func GetExists[T bool | []byte | int | string](key string) (T, bool) {
 // Different from Get[string] in that it returns the default value if the
 // environment variable exists but is empty.
 func GetString(key, defaultVal string) string {
-	val := Get[string](key, defaultVal)
+	val := Get(key, defaultVal)
 	if val == "" {
 		return defaultVal
 	}
@@ -101,5 +101,4 @@ func IsProd() bool {
 	parse(env)
 
 	return env == EnvProd
-
 }
