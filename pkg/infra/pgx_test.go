@@ -13,9 +13,9 @@ import (
 func testPool(t *testing.T) *pgxpool.Pool {
 	assert := assert.New(t)
 
-	dsn := env.Get("POSTGRES_DSN", "")
+	dsn := env.Get("POSTGRES_TEST_DSN", "")
 	if len(dsn) == 0 {
-		assert.FailNow("POSTGRES_DSN is empty")
+		assert.FailNow("POSTGRES_TEST_DSN is empty")
 	}
 
 	pool, err := PgxPool(context.Background(), dsn, "")

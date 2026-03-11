@@ -13,9 +13,9 @@ import (
 func testDB(t *testing.T) *sql.DB {
 	assert := assert.New(t)
 
-	dsn := env.Get("POSTGRES_DSN", "")
+	dsn := env.Get("POSTGRES_TEST_DSN", "")
 	if len(dsn) == 0 {
-		assert.FailNow("POSTGRES_DSN is empty")
+		assert.FailNow("POSTGRES_TEST_DSN is empty")
 	}
 
 	db, err := DB(context.Background(), dsn, "")
@@ -35,7 +35,7 @@ func TestSQLExecutorQuerier_Execute(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	executor := NewSQLExecutorQuerier(db)
 
@@ -48,7 +48,7 @@ func TestSQLExecutorQuerier_Query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	executor := NewSQLExecutorQuerier(db)
 
@@ -81,7 +81,7 @@ func TestSQLExecutorQuerier_QueryRow(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	executor := NewSQLExecutorQuerier(db)
 

@@ -71,7 +71,7 @@ func TestWithErrChecker(t *testing.T) {
 	c := &client{}
 	o(c)
 
-	c.errChecker(nil, nil)
+	_ = c.errChecker(nil, nil)
 
 	assert.True(called)
 }
@@ -90,7 +90,7 @@ func TestWithResponseUnmarshaler(t *testing.T) {
 	c := &client{}
 	o(c)
 
-	c.responseUnmarshaler(nil, nil)
+	_ = c.responseUnmarshaler(nil, nil)
 
 	assert.True(called)
 }

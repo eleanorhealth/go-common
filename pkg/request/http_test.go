@@ -91,7 +91,7 @@ func TestClient_Get(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(http.MethodGet, r.Method)
 
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, _ = w.Write([]byte(`{"foo": "bar"}`))
 	}))
 
 	baseURL := server.URL
@@ -119,7 +119,7 @@ func TestClient_Post(t *testing.T) {
 		reqBytes, _ := io.ReadAll(r.Body)
 		assert.Equal(body, reqBytes)
 
-		w.Write([]byte(`{"cat": "baz"}`))
+		_, _ = w.Write([]byte(`{"cat": "baz"}`))
 	}))
 
 	baseURL := server.URL
@@ -147,7 +147,7 @@ func TestClient_Put(t *testing.T) {
 		reqBytes, _ := io.ReadAll(r.Body)
 		assert.Equal(body, reqBytes)
 
-		w.Write([]byte(`{"cat": "baz"}`))
+		_, _ = w.Write([]byte(`{"cat": "baz"}`))
 	}))
 
 	baseURL := server.URL
@@ -175,7 +175,7 @@ func TestClient_Patch(t *testing.T) {
 		reqBytes, _ := io.ReadAll(r.Body)
 		assert.Equal(body, reqBytes)
 
-		w.Write([]byte(`{"cat": "baz"}`))
+		_, _ = w.Write([]byte(`{"cat": "baz"}`))
 	}))
 
 	baseURL := server.URL
@@ -203,7 +203,7 @@ func TestClient_Delete(t *testing.T) {
 		reqBytes, _ := io.ReadAll(r.Body)
 		assert.Equal(body, reqBytes)
 
-		w.Write([]byte(`{"cat": "baz"}`))
+		_, _ = w.Write([]byte(`{"cat": "baz"}`))
 	}))
 
 	baseURL := server.URL

@@ -21,7 +21,7 @@ func LocalParameterBeforeHook[ModelT any](fn func(ctx context.Context) map[strin
 		var args []any
 
 		for k, v := range vars {
-			builder.WriteString(fmt.Sprintf(`SET LOCAL "%s" = ?;`, k))
+			fmt.Fprintf(&builder, `SET LOCAL "%s" = ?;`, k)
 			args = append(args, v)
 		}
 

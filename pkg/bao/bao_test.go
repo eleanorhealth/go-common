@@ -19,9 +19,9 @@ import (
 func testDB(t *testing.T) *bun.DB {
 	assert := assert.New(t)
 
-	dsn := env.Get("POSTGRES_DSN", "")
+	dsn := env.Get("POSTGRES_TEST_DSN", "")
 	if len(dsn) == 0 {
-		assert.FailNow("POSTGRES_DSN is empty")
+		assert.FailNow("POSTGRES_TEST_DSN is empty")
 	}
 
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
@@ -510,7 +510,7 @@ func TestCreate_WithBeforeHooks_error(t *testing.T) {
 
 	db := testDB(t)
 
-	var beforeCreateErr = errors.New("test")
+	beforeCreateErr := errors.New("test")
 	beforeCreate := func(ctx context.Context, db bun.IDB, model *testModel) error {
 		return beforeCreateErr
 	}
@@ -609,7 +609,7 @@ func TestUpdate_WithBeforeHooks_error(t *testing.T) {
 
 	db := testDB(t)
 
-	var beforeUpdateErr = errors.New("test")
+	beforeUpdateErr := errors.New("test")
 	beforeUpdate := func(ctx context.Context, db bun.IDB, model *testModel) error {
 		return beforeUpdateErr
 	}
