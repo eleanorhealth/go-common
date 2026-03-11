@@ -10,8 +10,8 @@ import (
 func TestGet(t *testing.T) {
 	assert := assert.New(t)
 
-	os.Setenv("FOO", "1")
-	os.Setenv("BAR", "")
+	t.Setenv("FOO", "1")
+	t.Setenv("BAR", "")
 	assert.Equal("1", Get("FOO", ""))
 	assert.Equal([]byte("1"), Get("FOO", []byte("")))
 	assert.Equal(1, Get("FOO", 0))
@@ -31,7 +31,7 @@ func TestGet_default(t *testing.T) {
 func TestGetExists(t *testing.T) {
 	assert := assert.New(t)
 
-	os.Setenv("FOO", "1")
+	t.Setenv("FOO", "1")
 
 	v, exists := GetExists[string]("FOO")
 	assert.Equal("1", v)
@@ -45,8 +45,8 @@ func TestGetExists(t *testing.T) {
 func TestGetString(t *testing.T) {
 	assert := assert.New(t)
 
-	os.Setenv("FOO", "1")
-	os.Setenv("BAR", "")
+	t.Setenv("FOO", "1")
+	t.Setenv("BAR", "")
 
 	v := GetString("FOO", "default1")
 	assert.Equal("1", v)

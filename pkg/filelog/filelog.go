@@ -32,7 +32,11 @@ func (f FileLogger) Log(msg string) error {
 		return errs.Wrap(err, "unable to open file")
 	}
 
-	defer file.Close()
+	defer func() {
+		if e := file.Close(); e != nil && err == nil {
+			err = errs.Wrap(e, "unable to close file")
+		}
+	}()
 	_, err = io.Copy(file, strings.NewReader(msg+"\n"))
 	if err != nil {
 		return errs.Wrap(err, "unable to write to file")

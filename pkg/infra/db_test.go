@@ -35,7 +35,7 @@ func TestSQLExecutorQuerier_Execute(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	executor := NewSQLExecutorQuerier(db)
 
@@ -48,7 +48,7 @@ func TestSQLExecutorQuerier_Query(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	executor := NewSQLExecutorQuerier(db)
 
@@ -81,7 +81,7 @@ func TestSQLExecutorQuerier_QueryRow(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	executor := NewSQLExecutorQuerier(db)
 

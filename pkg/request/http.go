@@ -114,7 +114,7 @@ func (c *client) Request(ctx context.Context, method, path string, body io.Reade
 	if err != nil {
 		return res, err
 	}
-	res.Body.Close()
+	_ = res.Body.Close()
 
 	res.Body = io.NopCloser(bytes.NewBuffer(resBody))
 
