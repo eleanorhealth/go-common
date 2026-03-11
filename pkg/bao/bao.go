@@ -15,7 +15,7 @@ import (
 )
 
 func SelectQuery[ModelT any](ctx context.Context, db bun.IDB, model *ModelT) (*bun.SelectQuery, *schema.Table, error) {
-	rType := reflect.TypeOf(model)
+	rType := reflect.TypeFor[*ModelT]()
 	if rType.Elem().Kind() != reflect.Struct && rType.Elem().Kind() != reflect.Slice {
 		return nil, nil, ErrModelNotStructOrSlice
 	}
@@ -147,7 +147,7 @@ func FindByIDForUpdate[ModelT any](ctx context.Context, db bun.IDB, id string, s
 }
 
 func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
-	rType := reflect.TypeOf(model)
+	rType := reflect.TypeFor[*ModelT]()
 	if rType.Elem().Kind() != reflect.Struct {
 		return ErrModelNotStruct
 	}
@@ -184,7 +184,7 @@ func Create[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 }
 
 func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
-	rType := reflect.TypeOf(model)
+	rType := reflect.TypeFor[*ModelT]()
 	if rType.Elem().Kind() != reflect.Struct {
 		return ErrModelNotStruct
 	}
@@ -230,7 +230,7 @@ func Update[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, befores 
 }
 
 func Delete[ModelT any](ctx context.Context, db bun.IDB, model *ModelT, queryFn func(q *bun.DeleteQuery), befores []hook.Before[ModelT], afters []hook.After[ModelT]) error {
-	rType := reflect.TypeOf(model)
+	rType := reflect.TypeFor[*ModelT]()
 	if rType.Elem().Kind() != reflect.Struct {
 		return ErrModelNotStruct
 	}
@@ -314,7 +314,7 @@ func Trx(ctx context.Context, db bun.IDB, fn func(ctx context.Context, tx bun.ID
 
 /*delete false means update*/
 func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, delete bool) error {
-	modelType := reflect.TypeOf(model).Elem()
+	modelType := reflect.TypeFor[ModelT]()
 
 	if modelType.Kind() != reflect.Struct {
 		return ErrModelNotStruct
@@ -343,8 +343,8 @@ func relatedModels[ModelT any](ctx context.Context, bun bun.IDB, model *ModelT, 
 		deleteModel := reflect.New(relation.JoinTable.Type)
 		q := bun.NewDelete().Model(deleteModel.Interface())
 
-		for _, joinField := range relation.JoinFields {
-			baseField := relation.BaseFields[0]
+		for _, joinField := range relation.JoinPKs {
+			baseField := relation.BasePKs[0]
 			q.Where(fmt.Sprintf("%s = ?", string(joinField.SQLName)), baseField.Value(reflect.ValueOf(*model)).Interface())
 		}
 
