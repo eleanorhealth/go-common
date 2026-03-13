@@ -9,15 +9,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func PgxPool(ctx context.Context, connString string, traceServiceName string) (*pgxpool.Pool, error) {
+// PgxPoolOption is a functional option applied to the pgxpool.Config before
+// the pool is created. Use it to inject custom dial functions, TLS settings, etc.
+type PgxPoolOption func(*pgxpool.Config)
+
+func PgxPool(ctx context.Context, connString string, traceServiceName string, opts ...PgxPoolOption) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
 		return nil, errs.Wrap(err, "parsing connection string")
 	}
 
-	err = setCloudSQLInstanceDialFunc(ctx, config.ConnConfig)
-	if err != nil {
-		return nil, errs.Wrap(err, "setting Cloud SQL instance dial func")
+	for _, opt := range opts {
+		opt(config)
 	}
 
 	// We don't need to worry about setting a default max number of database
