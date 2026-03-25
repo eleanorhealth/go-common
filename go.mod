@@ -7,6 +7,7 @@ toolchain go1.26.1
 tool github.com/golangci/golangci-lint/cmd/golangci-lint
 
 require (
+	cloud.google.com/go/cloudsqlconn v1.20.2
 	cloud.google.com/go/pubsub v1.50.1
 	github.com/DataDog/dd-trace-go/contrib/database/sql/v2 v2.6.0
 	github.com/DataDog/dd-trace-go/contrib/net/http/v2 v2.6.0
