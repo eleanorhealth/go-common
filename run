@@ -8,6 +8,10 @@ trap 'echo fatal: $0:$LINENO >&2' ERR
 cmd="${1:-help}"
 
 case "$cmd" in
+# -- run tests for all packages
+test)
+  go test -race ./...
+  ;;
 # -- run golangci-lint
 lint)
   go tool golangci-lint run ./...
