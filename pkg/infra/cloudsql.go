@@ -27,7 +27,7 @@ func CloudSQLDialerOption(ctx context.Context) (DBOption, error) {
 	}
 
 	return func(config *pgx.ConnConfig) {
-		config.Config.DialFunc = func(ctx context.Context, _ string, _ string) (net.Conn, error) {
+		config.DialFunc = func(ctx context.Context, _ string, _ string) (net.Conn, error) {
 			return d.Dial(ctx, cloudSQLInstance)
 		}
 	}, nil
