@@ -10,9 +10,9 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/eleanorhealth/go-common/pkg/env"
 	"github.com/eleanorhealth/go-common/pkg/errs"
-	"github.com/georgysavva/scany/sqlscan"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/stdlib"
+	"github.com/georgysavva/scany/v2/sqlscan"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
 )
 
@@ -88,7 +88,7 @@ func setCloudSQLInstanceDialFunc(ctx context.Context, config *pgx.ConnConfig) er
 			return errs.Wrap(err, "initializing connection dialer")
 		}
 
-		config.DialFunc = func(ctx context.Context, _ string, instance string) (net.Conn, error) {
+		config.Config.DialFunc = func(ctx context.Context, _ string, instance string) (net.Conn, error) {
 			return d.Dial(ctx, cloudSQLInstance)
 		}
 	}
