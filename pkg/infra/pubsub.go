@@ -3,7 +3,7 @@ package infra
 import (
 	"context"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 )
 
 type PubsubMessagePublisher interface {
@@ -18,10 +18,10 @@ func (n *NopPublisher) Publish(ctx context.Context, msg *pubsub.Message) error {
 }
 
 type PubsubPublisher struct {
-	t *pubsub.Topic
+	t *pubsub.Publisher
 }
 
-func NewPubsubPublisher(t *pubsub.Topic) *PubsubPublisher {
+func NewPubsubPublisher(t *pubsub.Publisher) *PubsubPublisher {
 	return &PubsubPublisher{
 		t: t,
 	}
@@ -61,10 +61,10 @@ func (n *NopReceiver) Receive(ctx context.Context, f func(context.Context, *Pubs
 }
 
 type PubsubReceiver struct {
-	s *pubsub.Subscription
+	s *pubsub.Subscriber
 }
 
-func NewPubsubReceiver(s *pubsub.Subscription) *PubsubReceiver {
+func NewPubsubReceiver(s *pubsub.Subscriber) *PubsubReceiver {
 	return &PubsubReceiver{
 		s: s,
 	}

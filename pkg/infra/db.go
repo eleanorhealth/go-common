@@ -3,23 +3,25 @@ package infra
 import (
 	"context"
 	"database/sql"
-	"net"
 	"time"
 
-	"cloud.google.com/go/cloudsqlconn"
+	sqltrace "github.com/DataDog/dd-trace-go/contrib/database/sql/v2"
 	"github.com/avast/retry-go"
 	"github.com/eleanorhealth/go-common/pkg/env"
 	"github.com/eleanorhealth/go-common/pkg/errs"
-	"github.com/georgysavva/scany/sqlscan"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/stdlib"
-	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+	"github.com/georgysavva/scany/v2/sqlscan"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
 	// Default number of max database connections.
 	dbMaxOpenConns = 5
 )
+
+// DBOption is a functional option applied to the pgx.ConnConfig before the
+// sql.DB is opened. Use it to inject custom dial functions, TLS settings, etc.
+type DBOption func(*pgx.ConnConfig)
 
 type DBExecutor interface {
 	Execute(ctx context.Context, query string, args ...any) (int64, error)
@@ -35,20 +37,19 @@ type DBExecutorQuerier interface {
 	DBQuerier
 }
 
-func DB(ctx context.Context, connString string, traceServiceName string) (*sql.DB, error) {
+func DB(ctx context.Context, connString string, traceServiceName string, opts ...DBOption) (*sql.DB, error) {
 	config, err := pgx.ParseConfig(connString)
 	if err != nil {
 		return nil, errs.Wrap(err, "parsing connection string")
 	}
 
-	err = setCloudSQLInstanceDialFunc(ctx, config)
-	if err != nil {
-		return nil, errs.Wrap(err, "setting Cloud SQL instance dial func")
+	for _, opt := range opts {
+		opt(config)
 	}
 
 	connector := stdlib.GetConnector(*config)
 	sqltrace.Register("pgx", stdlib.GetDefaultDriver())
-	db := sqltrace.OpenDB(connector, sqltrace.WithServiceName(traceServiceName))
+	db := sqltrace.OpenDB(connector, sqltrace.WithService(traceServiceName))
 
 	if v, exists := env.GetExists[int]("DB_CONN_MAX_IDLE_TIME"); exists {
 		db.SetConnMaxIdleTime(time.Duration(v) * time.Minute)
@@ -78,31 +79,15 @@ func DB(ctx context.Context, connString string, traceServiceName string) (*sql.D
 	return db, nil
 }
 
-func setCloudSQLInstanceDialFunc(ctx context.Context, config *pgx.ConnConfig) error {
-	cloudSQLInstance := env.Get("CLOUD_SQL_INSTANCE", "")
-	if len(cloudSQLInstance) > 0 {
-		d, err := cloudsqlconn.NewDialer(ctx, cloudsqlconn.WithDefaultDialOptions(
-			cloudsqlconn.WithPrivateIP(),
-		))
-		if err != nil {
-			return errs.Wrap(err, "initializing connection dialer")
-		}
-
-		config.DialFunc = func(ctx context.Context, _ string, instance string) (net.Conn, error) {
-			return d.Dial(ctx, cloudSQLInstance)
-		}
-	}
-
-	return nil
-}
-
 type SQLExecutorQuerier struct {
 	db *sql.DB
 }
 
-var _ DBExecutor = (*SQLExecutorQuerier)(nil)
-var _ DBQuerier = (*SQLExecutorQuerier)(nil)
-var _ DBExecutorQuerier = (*SQLExecutorQuerier)(nil)
+var (
+	_ DBExecutor        = (*SQLExecutorQuerier)(nil)
+	_ DBQuerier         = (*SQLExecutorQuerier)(nil)
+	_ DBExecutorQuerier = (*SQLExecutorQuerier)(nil)
+)
 
 func NewSQLExecutorQuerier(db *sql.DB) *SQLExecutorQuerier {
 	return &SQLExecutorQuerier{
