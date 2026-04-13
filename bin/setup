@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+shopt -s globstar
+trap 'echo error: line $LINENO >&2' ERR
+# AGENTS: run bin/setup at session start if not already done — it is idempotent.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/../.env"
+
+# GITHUB_TOKEN present means we're running as a cloud agent (CI or Claude Code web).
+is_cloud_agent() {
+  [[ -n "${GITHUB_TOKEN:-}" ]]
+}
+
+# Install mise if missing, then install Go from .tool-versions and activate shims.
+install_toolchain() {
+  if ! command -v mise &>/dev/null; then
+    curl https://mise.run | sh
+    export PATH="$HOME/.local/bin:$PATH"
+  fi
+  mise install
+  export PATH="$HOME/.local/share/mise/shims:$PATH"
+}
+
+# storage.googleapis.com is unreachable in the Claude Code cloud environment (DNS issue,
+# April 2026 — see server/bin/setup for details). Detect and reroute through goproxy.io.
+fix_goproxy_if_needed() {
+  if ! curl -s --max-time 3 https://storage.googleapis.com > /dev/null 2>&1; then
+    export GOPROXY="https://goproxy.io,direct"
+    export GONOSUMDB="*"
+    echo "info: storage.googleapis.com unreachable, using GOPROXY=goproxy.io" >&2
+  fi
+}
+
+# Create .env from defaults if not present
+if [[ ! -f "$ENV_FILE" ]]; then
+  cp "$SCRIPT_DIR/../.env-default" "$ENV_FILE"
+fi
+
+export GOPRIVATE="github.com/eleanorhealth/*"
+[[ -n "${CLAUDE_ENV_FILE:-}" ]] && echo "GOPRIVATE=github.com/eleanorhealth/*" >> "${CLAUDE_ENV_FILE}"
+
+if is_cloud_agent; then
+  if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+    echo "error: GITHUB_TOKEN not set in cloud agent environment" >&2
+    exit 1
+  fi
+
+  install_toolchain
+  fix_goproxy_if_needed
+
+  git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/eleanorhealth".insteadOf "https://github.com/eleanorhealth"
+else
+  echo "info: for private module access, configure SSH:" >&2
+  echo "  git config --global url.\"ssh://git@github.com/\".insteadOf \"https://github.com/\"" >&2
+  echo "info: run 'mise install' to install Go (see .tool-versions)" >&2
+fi
+
+go mod download
+go install tool
+
+setup_gpg_signing() {
+  if [ -z "${GPG_PRIVATE_KEY:-}" ]; then
+    echo "bin/setup: GPG_PRIVATE_KEY not set, skipping"
+    return 0
+  fi
+
+  mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+
+  # Allow non-interactive signing
+  echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
+  gpg-connect-agent reloadagent /bye > /dev/null 2>&1 || true
+
+  if [ -n "${GPG_PASSPHRASE:-}" ]; then
+    echo "${GPG_PRIVATE_KEY}" | base64 --decode \
+      | gpg --batch --passphrase "${GPG_PASSPHRASE}" --pinentry-mode loopback --import
+  else
+    echo "${GPG_PRIVATE_KEY}" | base64 --decode | gpg --batch --import
+  fi
+
+  FINGERPRINT=$(gpg --list-secret-keys --with-colons \
+    | awk -F: '/^fpr:/{print $10; exit}')
+
+  git config --global user.signingkey "${FINGERPRINT}"
+  git config --global commit.gpgsign true
+  git config --global gpg.format openpgp
+  git config --global gpg.program gpg
+
+  # If a passphrase is set, wrap gpg to supply it non-interactively
+  if [ -n "${GPG_PASSPHRASE:-}" ]; then
+    cat > /usr/local/bin/gpg-passphrase-wrapper <<WRAPPER
+#!/usr/bin/env bash
+exec gpg --batch --passphrase "${GPG_PASSPHRASE}" --pinentry-mode loopback "\$@"
+WRAPPER
+    chmod +x /usr/local/bin/gpg-passphrase-wrapper
+    git config --global gpg.program /usr/local/bin/gpg-passphrase-wrapper
+  fi
+
+  echo "bin/setup: GPG signing configured (${FINGERPRINT})"
+}
+
+setup_gpg_signing
