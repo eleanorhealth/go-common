@@ -17,10 +17,10 @@ Passing any other value panics immediately—this is intentional to surface
 misconfiguration at startup.
 
 ```go
-env.Setenv(env.EnvProd)
+token := env.Setenv(env.EnvProd)
 
-env.IsLocal() // false
-env.IsProd()  // true
+env.IsLocal(token) // false
+env.IsProd(token)  // true
 ```
 
 ## Reading environment variables
