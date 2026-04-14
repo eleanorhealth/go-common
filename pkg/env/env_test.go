@@ -61,44 +61,28 @@ func TestGetString(t *testing.T) {
 func TestIsLocal(t *testing.T) {
 	assert := assert.New(t)
 
-	Setenv("local")
-	assert.True(IsLocal())
-	assert.False(IsQA())
-	assert.False(IsProd())
+	token := Setenv("local")
+	assert.True(IsLocal(token))
+	assert.False(IsQA(token))
+	assert.False(IsProd(token))
 }
 
 func TestIsQA(t *testing.T) {
 	assert := assert.New(t)
 
-	Setenv("qa")
-	assert.False(IsLocal())
-	assert.True(IsQA())
-	assert.False(IsProd())
+	token := Setenv("qa")
+	assert.False(IsLocal(token))
+	assert.True(IsQA(token))
+	assert.False(IsProd(token))
 }
 
 func TestIsProd(t *testing.T) {
 	assert := assert.New(t)
 
-	Setenv("prod")
-	assert.False(IsLocal())
-	assert.False(IsQA())
-	assert.True(IsProd())
-}
-
-func TestIsX_panic(t *testing.T) {
-	assert := assert.New(t)
-
-	env = ""
-
-	assert.PanicsWithValue("invalid env \"\"", func() {
-		IsLocal()
-	})
-	assert.PanicsWithValue("invalid env \"\"", func() {
-		IsQA()
-	})
-	assert.PanicsWithValue("invalid env \"\"", func() {
-		IsProd()
-	})
+	token := Setenv("prod")
+	assert.False(IsLocal(token))
+	assert.False(IsQA(token))
+	assert.True(IsProd(token))
 }
 
 func TestSetenv_panic(t *testing.T) {
