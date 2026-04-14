@@ -25,10 +25,7 @@ func testDB(t *testing.T) *bun.DB {
 
 	db := bun.NewDB(sqldb, pgdialect.New())
 
-	_, err := db.NewCreateTable().Model(&testModel{}).IfNotExists().Exec(context.Background())
-	assert.NoError(err)
-
-	err = db.ResetModel(context.Background(), (*testModel)(nil))
+	err := db.ResetModel(context.Background(), (*testModel)(nil))
 	assert.NoError(err)
 
 	return db

@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestTimestampsBeforeHook_update(t *testing.T) {
+func TestTimestampsBeforeUpdateHook(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
 
-	hook := TimestampsBeforeHook[testModel](false)
+	hook := TimestampsBeforeUpdateHook[testModel]()
 
 	createdAt := time.Now().Add(-time.Hour)
 	model := &testModel{
@@ -29,16 +29,15 @@ func TestTimestampsBeforeHook_update(t *testing.T) {
 	assert.Zero(model.OtherTime)
 }
 
-func TestTimestampsBeforeHook_create(t *testing.T) {
+func TestTimestampsBeforeCreateHook(t *testing.T) {
 	assert := assert.New(t)
 
 	db := testDB(t)
 
-	hook := TimestampsBeforeHook[testModel](true)
+	hook := TimestampsBeforeCreateHook[testModel]()
 
 	model := &testModel{
-		// Assuming CreatedAt is already set for some reason on a create call
-		// TimestampsBeforeHook will override it with time.Now() by design
+		// CreatedAt is always overridden on create, even if pre-set.
 		CreatedAt: time.Now().Add(-time.Hour),
 		UpdatedAt: time.Now().Add(-time.Hour),
 	}
