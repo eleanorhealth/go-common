@@ -8,19 +8,25 @@ import (
 
 var env string
 
+// initialized is a witness type returned by Setenv. Passing it to IsLocal,
+// IsQA, or IsProd proves at compile time that Setenv was called first.
+type initialized struct{}
+
 func parse(e string) {
 	switch e {
 	case EnvLocal, EnvQA, EnvProd:
 		return
 	default:
-		panic(fmt.Sprintf("invalid env \"%s\"", e))
+		panic(fmt.Sprintf("invalid env %q", e))
 	}
 }
 
-func Setenv(e string) {
+func Setenv(e string) initialized {
 	parse(e)
 
 	env = e
+
+	return initialized{}
 }
 
 const (
@@ -85,20 +91,14 @@ func GetString(key, defaultVal string) string {
 	return val
 }
 
-func IsLocal() bool {
-	parse(env)
-
+func IsLocal(_ initialized) bool {
 	return env == EnvLocal
 }
 
-func IsQA() bool {
-	parse(env)
-
+func IsQA(_ initialized) bool {
 	return env == EnvQA
 }
 
-func IsProd() bool {
-	parse(env)
-
+func IsProd(_ initialized) bool {
 	return env == EnvProd
 }
