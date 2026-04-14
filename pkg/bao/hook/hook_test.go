@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/eleanorhealth/go-common/pkg/env"
 	"github.com/stretchr/testify/assert"
@@ -31,8 +32,11 @@ func testDB(t *testing.T) *bun.DB {
 }
 
 type testModel struct {
-	ID   string `bun:",pk"`
-	Name string
+	ID        string `bun:",pk"`
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	OtherTime time.Time
 }
 
 type queryLogger struct {
