@@ -12,6 +12,7 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/database/sql/v2 v2.6.0
 	github.com/DataDog/dd-trace-go/contrib/net/http/v2 v2.6.0
 	github.com/DataDog/dd-trace-go/v2 v2.6.0
+	github.com/eleanorhealth/go-common v1.1.1
 	github.com/fatih/structtag v1.2.0
 	github.com/georgysavva/scany/v2 v2.1.4
 	github.com/google/uuid v1.6.0
@@ -272,8 +273,6 @@ require (
 	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
-	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
-	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/api v0.272.0 // indirect
 	google.golang.org/genproto v0.0.0-20260217215200-42d3e9bedb6d // indirect
