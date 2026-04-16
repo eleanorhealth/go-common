@@ -1,10 +1,11 @@
-module github.com/eleanorhealth/go-common
+module github.com/eleanorhealth/go-common/v2
 
-go 1.26.0
+go 1.26.2
 
-toolchain go1.26.1
-
-tool github.com/golangci/golangci-lint/cmd/golangci-lint
+tool (
+	github.com/golangci/golangci-lint/cmd/golangci-lint
+	github.com/joho/godotenv
+)
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.20.2
@@ -12,6 +13,7 @@ require (
 	github.com/DataDog/dd-trace-go/contrib/database/sql/v2 v2.6.0
 	github.com/DataDog/dd-trace-go/contrib/net/http/v2 v2.6.0
 	github.com/DataDog/dd-trace-go/v2 v2.6.0
+	github.com/eleanorhealth/go-common v1.1.1
 	github.com/fatih/structtag v1.2.0
 	github.com/georgysavva/scany/v2 v2.1.4
 	github.com/google/uuid v1.6.0
@@ -136,6 +138,7 @@ require (
 	github.com/jgautheron/goconst v1.7.1 // indirect
 	github.com/jingyugao/rowserrcheck v1.1.1 // indirect
 	github.com/jjti/go-spancheck v0.6.4 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/julz/importas v0.2.0 // indirect
 	github.com/karamaru-alpha/copyloopvar v1.2.1 // indirect
@@ -272,8 +275,6 @@ require (
 	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
-	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
-	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/api v0.272.0 // indirect
 	google.golang.org/genproto v0.0.0-20260217215200-42d3e9bedb6d // indirect
