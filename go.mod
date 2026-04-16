@@ -1,10 +1,11 @@
 module github.com/eleanorhealth/go-common/v2
 
-go 1.26.0
+go 1.26.2
 
-toolchain go1.26.1
-
-tool github.com/golangci/golangci-lint/cmd/golangci-lint
+tool (
+	github.com/golangci/golangci-lint/cmd/golangci-lint
+	github.com/joho/godotenv
+)
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.20.2
@@ -137,6 +138,7 @@ require (
 	github.com/jgautheron/goconst v1.7.1 // indirect
 	github.com/jingyugao/rowserrcheck v1.1.1 // indirect
 	github.com/jjti/go-spancheck v0.6.4 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/julz/importas v0.2.0 // indirect
 	github.com/karamaru-alpha/copyloopvar v1.2.1 // indirect
