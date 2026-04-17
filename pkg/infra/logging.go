@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/eleanorhealth/go-common/pkg/env"
+	"github.com/eleanorhealth/go-common/v2/pkg/env"
 	"github.com/rs/zerolog"
 )
 

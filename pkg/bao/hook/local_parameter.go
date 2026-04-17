@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/eleanorhealth/go-common/pkg/errs"
+	"github.com/eleanorhealth/go-common/v2/pkg/errs"
 	"github.com/uptrace/bun"
 )
 

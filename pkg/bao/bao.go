@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/eleanorhealth/go-common/pkg/bao/hook"
-	"github.com/eleanorhealth/go-common/pkg/errs"
+	"github.com/eleanorhealth/go-common/v2/pkg/bao/hook"
+	"github.com/eleanorhealth/go-common/v2/pkg/errs"
 	"github.com/fatih/structtag"
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"

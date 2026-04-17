@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/eleanorhealth/go-common/pkg/bao/hook"
-	"github.com/eleanorhealth/go-common/pkg/env"
+	"github.com/eleanorhealth/go-common/v2/pkg/bao/hook"
+	"github.com/eleanorhealth/go-common/v2/pkg/env"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun"
