@@ -5,8 +5,8 @@ import (
 	"net"
 
 	"cloud.google.com/go/cloudsqlconn"
-	"github.com/eleanorhealth/go-common/pkg/env"
-	"github.com/eleanorhealth/go-common/pkg/errs"
+	"github.com/eleanorhealth/go-common/v2/pkg/env"
+	"github.com/eleanorhealth/go-common/v2/pkg/errs"
 	"github.com/jackc/pgx/v5"
 )
 

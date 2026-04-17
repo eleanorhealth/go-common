@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/avast/retry-go"
-	"github.com/eleanorhealth/go-common/pkg/errs"
+	"github.com/eleanorhealth/go-common/v2/pkg/errs"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgxpool"
 )

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/eleanorhealth/go-common/pkg/env"
+	"github.com/eleanorhealth/go-common/v2/pkg/env"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

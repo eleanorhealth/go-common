@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eleanorhealth/go-common/pkg/env"
+	"github.com/eleanorhealth/go-common/v2/pkg/env"
 	"github.com/stretchr/testify/assert"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
