@@ -3,7 +3,10 @@ package env
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
+
+	"github.com/eleanorhealth/go-common/v2/pkg/errs"
 )
 
 var env string
@@ -89,6 +92,78 @@ func GetString(key, defaultVal string) string {
 	}
 
 	return val
+}
+
+func ParseStruct(v any) error {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Pointer || rv.IsNil() || rv.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("env: ParseStruct requires a non-nil pointer to a struct")
+	}
+
+	rv = rv.Elem()
+	rt := rv.Type()
+
+	tagged := 0
+
+	for i := range rt.NumField() {
+		field := rt.Field(i)
+		if !field.IsExported() || field.Type.Kind() == reflect.Struct {
+			continue
+		}
+
+		key, ok := field.Tag.Lookup("env")
+		if !ok {
+			continue
+		}
+
+		tagged++
+
+		val, exists := os.LookupEnv(key)
+		if !exists {
+			return fmt.Errorf("env: %q is not set", key)
+		}
+
+		if val == "" {
+			continue
+		}
+
+		if err := setField(rv.Field(i), field.Name, key, val); err != nil {
+			return err
+		}
+	}
+
+	if tagged == 0 {
+		return fmt.Errorf("env: ParseStruct found no env tags")
+	}
+
+	return nil
+}
+
+func setField(fv reflect.Value, name, key, val string) error {
+	switch fv.Interface().(type) {
+	case string:
+		fv.SetString(val)
+	case bool:
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			return errs.Wrapf(err, "env: parsing %q for field %s", key, name)
+		}
+
+		fv.SetBool(b)
+	case int:
+		n, err := strconv.Atoi(val)
+		if err != nil {
+			return errs.Wrapf(err, "env: parsing %q for field %s", key, name)
+		}
+
+		fv.SetInt(int64(n))
+	case []byte:
+		fv.SetBytes([]byte(val))
+	default:
+		return fmt.Errorf("env: field %s has unsupported type %s", name, fv.Type())
+	}
+
+	return nil
 }
 
 func IsLocal(_ initialized) bool {
