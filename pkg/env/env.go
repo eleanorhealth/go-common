@@ -45,31 +45,38 @@ func Get[T bool | []byte | int | string](key string, defaultVal T) T {
 	}
 
 	var ret T
-	switch ptr := any(&ret).(type) {
-	case *bool:
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return defaultVal
-		}
-
-		*ptr = b
-
-	case *[]byte:
-		*ptr = []byte(v)
-
-	case *int:
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			return defaultVal
-		}
-
-		*ptr = i
-
-	case *string:
-		*ptr = v
+	if err := parseInto(v, &ret); err != nil {
+		return defaultVal
 	}
 
 	return ret
+}
+
+func parseInto(val string, ptr any) error {
+	switch p := ptr.(type) {
+	case *string:
+		*p = val
+	case *bool:
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			return err
+		}
+
+		*p = b
+	case *int:
+		n, err := strconv.Atoi(val)
+		if err != nil {
+			return err
+		}
+
+		*p = n
+	case *[]byte:
+		*p = []byte(val)
+	default:
+		return fmt.Errorf("unsupported type %T", ptr)
+	}
+
+	return nil
 }
 
 func GetExists[T bool | []byte | int | string](key string) (T, bool) {
@@ -140,27 +147,8 @@ func ParseStruct(v any) error {
 }
 
 func setField(fv reflect.Value, name, key, val string) error {
-	switch fv.Interface().(type) {
-	case string:
-		fv.SetString(val)
-	case bool:
-		b, err := strconv.ParseBool(val)
-		if err != nil {
-			return errs.Wrapf(err, "env: parsing %q for field %s", key, name)
-		}
-
-		fv.SetBool(b)
-	case int:
-		n, err := strconv.Atoi(val)
-		if err != nil {
-			return errs.Wrapf(err, "env: parsing %q for field %s", key, name)
-		}
-
-		fv.SetInt(int64(n))
-	case []byte:
-		fv.SetBytes([]byte(val))
-	default:
-		return fmt.Errorf("env: field %s has unsupported type %s", name, fv.Type())
+	if err := parseInto(val, fv.Addr().Interface()); err != nil {
+		return errs.Wrapf(err, "env: parsing %q for field %s", key, name)
 	}
 
 	return nil
