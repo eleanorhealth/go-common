@@ -134,21 +134,13 @@ func ParseStruct(v any) error {
 			continue
 		}
 
-		if err := setField(rv.Field(i), field.Name, key, val); err != nil {
-			return err
+		if err := parseInto(val, rv.Field(i).Addr().Interface()); err != nil {
+			return errs.Wrapf(err, "env: parsing %q for field %s", key, field.Name)
 		}
 	}
 
 	if tagged == 0 {
 		return fmt.Errorf("env: ParseStruct found no env tags")
-	}
-
-	return nil
-}
-
-func setField(fv reflect.Value, name, key, val string) error {
-	if err := parseInto(val, fv.Addr().Interface()); err != nil {
-		return errs.Wrapf(err, "env: parsing %q for field %s", key, name)
 	}
 
 	return nil
