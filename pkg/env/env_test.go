@@ -58,6 +58,61 @@ func TestGetString(t *testing.T) {
 	assert.Equal("default2", v)
 }
 
+func TestParseStruct(t *testing.T) {
+	assert := assert.New(t)
+
+	type nested struct{ X string }
+	type cfg struct {
+		Str    string `env:"PS_STR"`
+		Bool   bool   `env:"PS_BOOL"`
+		Int    int    `env:"PS_INT"`
+		Bytes  []byte `env:"PS_BYTES"`
+		NoTag  string
+		Empty  string `env:"PS_EMPTY"`
+		nested        // embedded struct: skipped
+		//nolint:unused
+		unexported string `env:"PS_UNEXPORTED"`
+	}
+
+	t.Setenv("PS_STR", "hello")
+	t.Setenv("PS_BOOL", "true")
+	t.Setenv("PS_INT", "42")
+	t.Setenv("PS_BYTES", "data")
+	t.Setenv("PS_EMPTY", "")
+
+	var c cfg
+	err := ParseStruct(&c)
+	assert.NoError(err)
+	assert.Equal("hello", c.Str)
+	assert.Equal(true, c.Bool)
+	assert.Equal(42, c.Int)
+	assert.Equal([]byte("data"), c.Bytes)
+	assert.Equal("", c.NoTag)
+	assert.Equal("", c.Empty)
+}
+
+func TestParseStruct_noTags(t *testing.T) {
+	assert := assert.New(t)
+
+	type cfg struct{ Foo string }
+
+	err := ParseStruct(&cfg{})
+	assert.EqualError(err, "env: ParseStruct found no env tags")
+}
+
+func TestParseStruct_unset(t *testing.T) {
+	assert := assert.New(t)
+
+	type cfg struct {
+		Foo string `env:"PS_UNSET_FOO"`
+	}
+
+	os.Unsetenv("PS_UNSET_FOO")
+
+	err := ParseStruct(&cfg{})
+	assert.EqualError(err, `env: "PS_UNSET_FOO" is not set`)
+}
+
 func TestIsLocal(t *testing.T) {
 	assert := assert.New(t)
 
