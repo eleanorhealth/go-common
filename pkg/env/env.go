@@ -126,8 +126,15 @@ func ParseStruct(v any) error {
 		tagged++
 
 		val, exists := os.LookupEnv(key)
-		if !exists {
-			return fmt.Errorf("env: %q is not set", key)
+		if !exists || val == "" {
+			defVal, hasDef := field.Tag.Lookup("envDefault")
+			if !exists && !hasDef {
+				return fmt.Errorf("env: %q is not set", key)
+			}
+			if !hasDef {
+				continue
+			}
+			val = defVal
 		}
 
 		if val == "" {
