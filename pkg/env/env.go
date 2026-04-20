@@ -3,7 +3,10 @@ package env
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strconv"
+
+	"github.com/eleanorhealth/go-common/v2/pkg/errs"
 )
 
 var env string
@@ -42,31 +45,38 @@ func Get[T bool | []byte | int | string](key string, defaultVal T) T {
 	}
 
 	var ret T
-	switch ptr := any(&ret).(type) {
-	case *bool:
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return defaultVal
-		}
-
-		*ptr = b
-
-	case *[]byte:
-		*ptr = []byte(v)
-
-	case *int:
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			return defaultVal
-		}
-
-		*ptr = i
-
-	case *string:
-		*ptr = v
+	if err := parseInto(v, &ret); err != nil {
+		return defaultVal
 	}
 
 	return ret
+}
+
+func parseInto(val string, ptr any) error {
+	switch p := ptr.(type) {
+	case *string:
+		*p = val
+	case *bool:
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			return err
+		}
+
+		*p = b
+	case *int:
+		n, err := strconv.Atoi(val)
+		if err != nil {
+			return err
+		}
+
+		*p = n
+	case *[]byte:
+		*p = []byte(val)
+	default:
+		return fmt.Errorf("unsupported type %T", ptr)
+	}
+
+	return nil
 }
 
 func GetExists[T bool | []byte | int | string](key string) (T, bool) {
@@ -89,6 +99,51 @@ func GetString(key, defaultVal string) string {
 	}
 
 	return val
+}
+
+func ParseStruct(v any) error {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Pointer || rv.IsNil() || rv.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("env: ParseStruct requires a non-nil pointer to a struct")
+	}
+
+	rv = rv.Elem()
+	rt := rv.Type()
+
+	tagged := 0
+
+	for i := range rt.NumField() {
+		field := rt.Field(i)
+		if !field.IsExported() || field.Type.Kind() == reflect.Struct {
+			continue
+		}
+
+		key, ok := field.Tag.Lookup("env")
+		if !ok {
+			continue
+		}
+
+		tagged++
+
+		val, exists := os.LookupEnv(key)
+		if !exists {
+			return fmt.Errorf("env: %q is not set", key)
+		}
+
+		if val == "" {
+			continue
+		}
+
+		if err := parseInto(val, rv.Field(i).Addr().Interface()); err != nil {
+			return errs.Wrapf(err, "env: parsing %q for field %s", key, field.Name)
+		}
+	}
+
+	if tagged == 0 {
+		return fmt.Errorf("env: ParseStruct found no env tags")
+	}
+
+	return nil
 }
 
 func IsLocal(_ initialized) bool {
