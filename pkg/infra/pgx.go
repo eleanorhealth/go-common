@@ -45,9 +45,11 @@ type PgxPoolExecutorQuerier struct {
 	pool *pgxpool.Pool
 }
 
-var _ DBExecutor = (*PgxPoolExecutorQuerier)(nil)
-var _ DBQuerier = (*PgxPoolExecutorQuerier)(nil)
-var _ DBExecutorQuerier = (*PgxPoolExecutorQuerier)(nil)
+var (
+	_ DBExecutor        = (*PgxPoolExecutorQuerier)(nil)
+	_ DBQuerier         = (*PgxPoolExecutorQuerier)(nil)
+	_ DBExecutorQuerier = (*PgxPoolExecutorQuerier)(nil)
+)
 
 func NewPgxExecutorQuerier(pool *pgxpool.Pool) *PgxPoolExecutorQuerier {
 	return &PgxPoolExecutorQuerier{

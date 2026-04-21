@@ -10,8 +10,7 @@ type PubsubMessagePublisher interface {
 	Publish(ctx context.Context, msg *pubsub.Message) error
 }
 
-type NopPublisher struct {
-}
+type NopPublisher struct{}
 
 func (n *NopPublisher) Publish(ctx context.Context, msg *pubsub.Message) error {
 	return nil
@@ -53,8 +52,7 @@ func (p *PubsubMessage) Nack() {
 	p.NackFn()
 }
 
-type NopReceiver struct {
-}
+type NopReceiver struct{}
 
 func (n *NopReceiver) Receive(ctx context.Context, f func(context.Context, *PubsubMessage)) error {
 	return nil

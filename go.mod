@@ -5,6 +5,7 @@ go 1.26.2
 tool (
 	github.com/golangci/golangci-lint/cmd/golangci-lint
 	github.com/joho/godotenv
+	mvdan.cc/gofumpt
 )
 
 require (

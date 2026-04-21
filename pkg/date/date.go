@@ -5,9 +5,7 @@ import (
 	"time"
 )
 
-var (
-	ErrNoLayoutMatched = errors.New("no layout matched")
-)
+var ErrNoLayoutMatched = errors.New("no layout matched")
 
 // EOD returns the end of the day in the provided timezone
 func EOD(t time.Time, loc *time.Location) time.Time {

@@ -18,6 +18,7 @@ const (
 
 	authTypeBasic authType = iota
 	authTypeBearerToken
+	authTypeAPIKey
 )
 
 type HTTPError struct {
@@ -51,6 +52,7 @@ type client struct {
 	bearerToken string
 	basicUser   string
 	basicPass   string
+	apiKey      string
 	authType    authType
 
 	errChecker          HTTPErrChecker
@@ -103,6 +105,8 @@ func (c *client) Request(ctx context.Context, method, path string, body io.Reade
 		req.SetBasicAuth(c.basicUser, c.basicPass)
 	case authTypeBearerToken:
 		req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+	case authTypeAPIKey:
+		req.Header.Set("Authorization", "Key "+c.apiKey)
 	}
 
 	res, err := c.httpClient.Do(req)
