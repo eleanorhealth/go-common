@@ -91,6 +91,27 @@ func TestParseStruct(t *testing.T) {
 	assert.Equal("", c.Empty)
 }
 
+func TestParseStruct_envDefault(t *testing.T) {
+	assert := assert.New(t)
+
+	type cfg struct {
+		Unset   string `env:"PS_DEF_UNSET" envDefault:"fallback"`
+		Empty   string `env:"PS_DEF_EMPTY" envDefault:"fallback2"`
+		Present string `env:"PS_DEF_PRESENT" envDefault:"ignored"`
+	}
+
+	os.Unsetenv("PS_DEF_UNSET")
+	t.Setenv("PS_DEF_EMPTY", "")
+	t.Setenv("PS_DEF_PRESENT", "actual")
+
+	var c cfg
+	err := ParseStruct(&c)
+	assert.NoError(err)
+	assert.Equal("fallback", c.Unset)
+	assert.Equal("fallback2", c.Empty)
+	assert.Equal("actual", c.Present)
+}
+
 func TestParseStruct_noTags(t *testing.T) {
 	assert := assert.New(t)
 

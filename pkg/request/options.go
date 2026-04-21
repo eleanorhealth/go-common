@@ -23,6 +23,13 @@ func WithBearerTokenAuth(bearerToken string) option {
 	}
 }
 
+func WithAPIKeyAuth(apiKey string) option {
+	return func(c *client) {
+		c.apiKey = apiKey
+		c.authType = authTypeAPIKey
+	}
+}
+
 func WithBasicAuth(user, pass string) option {
 	return func(c *client) {
 		c.basicUser = user

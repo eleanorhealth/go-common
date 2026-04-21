@@ -29,7 +29,6 @@ Keep comments short and sweet, don't document obvious code.
 ## Misc
 
 go: run go mod tidy after making changes to go.mod and dependencies.
-do not document obvious things
 be more minimalistic: being helpful is good but we need to right answer, avoid guessing or crazy workarounds, if you are blocked, be explicit.
 avoid single letter vars if their scope is not small; go: receivers, loop vars are an exception.
 go: avoid multi line if conditions with samber/lo functions.
@@ -37,4 +36,14 @@ when we refactor, minimize renames unless asked for.
 add tests when asked for; look for code that is complex or prone to change/ bugs; if tests never break they add no value.
 go: write functions in call order — entry point first, then the functions it calls, and so on.
 run formatter as last step after making code changes.
-do not pool jobs by yourself, let me request pooling.
+
+## Package Documentation
+
+Every Go package under `pkg/` has a `doc.go` file with a package-level comment:
+
+```go
+// Package foobar <brief description of this package>
+package foobar
+```
+
+When adding a new package, create a `doc.go` file following this pattern. `cmd/` packages (which are `package main`) are exempt.

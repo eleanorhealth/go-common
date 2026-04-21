@@ -93,19 +93,19 @@ func TestWithinDuration_dates_outside_duration(t *testing.T) {
 func TestParseAny(t *testing.T) {
 	assert := assert.New(t)
 
-	var approxDateLayouts = []string{"01/02/2006", "01/2006", "2006"}
+	approxDateLayouts := []string{"01/02/2006", "01/2006", "2006"}
 	dateString := "10/2022"
 
 	parsedDate, err := ParseAny(approxDateLayouts, dateString)
 	assert.NoError(err)
 
-	assert.Equal(time.Date(2022, 10, 01, 0, 0, 0, 0, time.UTC), parsedDate)
+	assert.Equal(time.Date(2022, 10, 0o1, 0, 0, 0, 0, time.UTC), parsedDate)
 }
 
 func TestParseAny_error(t *testing.T) {
 	assert := assert.New(t)
 
-	var approxDateLayouts = []string{"01/02/2006", "01/2006", "2006"}
+	approxDateLayouts := []string{"01/02/2006", "01/2006", "2006"}
 	dateString := "2022-10-01"
 
 	_, err := ParseAny(approxDateLayouts, dateString)
