@@ -3,13 +3,17 @@
 set -euo pipefail
 shopt -s globstar
 trap 'echo error: line $LINENO >&2' ERR
-# AGENTS: run bin/setup at session start if not already done — it is idempotent.
+# This script runs in three environments:
+#   - Local dev machines (no GITHUB_TOKEN, SSH for private modules)
+#   - Cloud agent containers (CLAUDE_CODE_REMOTE=true, GITHUB_TOKEN injected)
+#   - Jail agent containers (GITHUB_TOKEN sourced from .env)
+#
+# It is idempotent — safe to re-run at any time.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/../.env"
 
-# GITHUB_TOKEN present means we're running as a cloud agent (CI or Claude Code web).
-is_cloud_agent() {
+is_agent() {
   [[ -n "${GITHUB_TOKEN:-}" ]]
 }
 
@@ -38,19 +42,33 @@ if [[ ! -f "$ENV_FILE" ]]; then
   cp "$SCRIPT_DIR/../.env-default" "$ENV_FILE"
 fi
 
+# Source .env to pick up GITHUB_TOKEN if not already injected (jail agent case)
+if [[ -z "${GITHUB_TOKEN:-}" && -f "$ENV_FILE" ]]; then
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+fi
+
 export GOPRIVATE="github.com/eleanorhealth/*"
 [[ -n "${CLAUDE_ENV_FILE:-}" ]] && echo "GOPRIVATE=github.com/eleanorhealth/*" >> "${CLAUDE_ENV_FILE}"
 
-if is_cloud_agent; then
+if is_agent; then
   if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-    echo "error: GITHUB_TOKEN not set in cloud agent environment" >&2
+    echo "error: GITHUB_TOKEN not set in agent environment" >&2
     exit 1
+  fi
+
+  if ! grep -q '^GITHUB_TOKEN=.' "$ENV_FILE"; then
+    sed -i "s|^GITHUB_TOKEN=$|GITHUB_TOKEN=${GITHUB_TOKEN}|" "$ENV_FILE"
   fi
 
   install_toolchain
   fix_goproxy_if_needed
 
   git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/eleanorhealth".insteadOf "https://github.com/eleanorhealth"
+
+  if ! command -v prettier &>/dev/null; then
+    npm install -g prettier || echo "npm: prettier install failed" >&2
+  fi
 else
   echo "info: for private module access, configure SSH:" >&2
   echo "  git config --global url.\"ssh://git@github.com/\".insteadOf \"https://github.com/\"" >&2
