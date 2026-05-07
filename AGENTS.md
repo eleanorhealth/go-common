@@ -26,6 +26,16 @@ Keep comments short and sweet, don't document obvious code.
 **Formatting:** We use `gofumpt`.
 **Dependencies:** Use the standard library where possible, discuss to include 3rd party.
 
+## Agent setup
+
+Run `bin/setup` at session start if not already done — it is idempotent and safe to re-run.
+It installs Go and Node via mise (.tool-versions), configures git auth for private modules,
+and downloads dependencies.
+
+`GITHUB_TOKEN` is required for private module access. Cloud agents have it injected into
+the environment automatically. Jail agents (local container) carry it in `.env` — `bin/setup`
+sources it from there. Human devs rely on SSH instead.
+
 ## Misc
 
 go: run go mod tidy after making changes to go.mod and dependencies.
