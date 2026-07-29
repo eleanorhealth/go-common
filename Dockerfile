@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine
+FROM golang:1.26.5-alpine
 
 RUN apk upgrade --no-cache && \
     apk --no-cache add libc-dev gcc bash git
