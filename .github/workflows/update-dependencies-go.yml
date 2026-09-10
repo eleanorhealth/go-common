@@ -28,16 +28,9 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Authenticate as GitHub App
-        id: auth-github
-        uses: eleanorhealth/github-app-installation-auth-action@v1.0.3
-        with:
-          private-key: "${{ secrets.PRIVATE_KEY }}"
-          app-id: "${{ secrets.DEPLOYER_GITHUB_APP_ID }}"
-
       - name: Configure git
         run: |
-          git config --global url."https://x-access-token:${{ steps.auth-github.outputs.github_app_token }}@github.com/eleanorhealth".insteadOf "https://github.com/eleanorhealth"
+          git config --global url."https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/eleanorhealth".insteadOf "https://github.com/eleanorhealth"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
 
