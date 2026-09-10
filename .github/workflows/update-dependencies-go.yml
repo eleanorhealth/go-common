@@ -28,16 +28,9 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Authenticate as GitHub App
-        id: auth-github
-        uses: eleanorhealth/github-app-installation-auth-action@v1.0.3
-        with:
-          private-key: "${{ secrets.PRIVATE_KEY }}"
-          app-id: "${{ secrets.DEPLOYER_GITHUB_APP_ID }}"
-
       - name: Configure git
         run: |
-          git config --global url."https://x-access-token:${{ steps.auth-github.outputs.github_app_token }}@github.com/eleanorhealth".insteadOf "https://github.com/eleanorhealth"
+          git config --global url."https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/eleanorhealth".insteadOf "https://github.com/eleanorhealth"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
 
@@ -50,6 +43,10 @@ jobs:
           NEEDS_GO_UPDATE: ${{ steps.detect-go-version.outputs.needs_go_update }}
           LATEST_GO_MINOR: ${{ steps.detect-go-version.outputs.latest_go_minor }}
           LATEST_GO_FULL: ${{ steps.detect-go-version.outputs.latest_go_full }}
+          # actions/setup-go pins GOTOOLCHAIN=local to the version resolved from go.mod, so once
+          # this step bumps the go directive to a newer minor, `go` needs GOTOOLCHAIN=auto to
+          # download and switch to that toolchain itself rather than erroring out.
+          GOTOOLCHAIN: auto
         run: bin/update-deps
 
       - name: Create PR
